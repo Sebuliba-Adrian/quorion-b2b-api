@@ -1,0 +1,12 @@
+Django==5.2.8
+djangorestframework==3.16.1
+django-fsm==3.0.1
+django-extensions==4.1
+django-filter==25.2
+django-cors-headers==4.9.0
+psycopg2-binary==2.9.11
+pytest==9.0.1
+pytest-django==4.11.1
+pytest-cov==7.0.0
+python-dateutil==2.9.0
+
