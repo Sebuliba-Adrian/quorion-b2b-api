@@ -1,0 +1,12 @@
+[MASTER]
+ignore=venv,migrations
+
+[MESSAGES CONTROL]
+disable=missing-docstring,too-few-public-methods,too-many-instance-attributes
+
+[FORMAT]
+max-line-length=120
+
+[TYPECHECK]
+ignored-classes=optparse.Values,thread._local,_thread._local
+
