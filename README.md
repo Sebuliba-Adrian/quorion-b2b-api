@@ -1,20 +1,22 @@
 # Quorion B2B API
 
-[![CI/CD](https://github.com/Sebuliba-Adrian/quorion-b2b-api/actions/workflows/ci.yml/badge.svg)](https://github.com/Sebuliba-Adrian/quorion-b2b-api/actions)
-[![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](https://github.com/Sebuliba-Adrian/quorion-b2b-api)
+[![CI/CD](https://github.com/Sebuliba-Adrian/quorion-b2b-api/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/Sebuliba-Adrian/quorion-b2b-api/actions)
+[![Coverage](https://codecov.io/gh/Sebuliba-Adrian/quorion-b2b-api/branch/main/graph/badge.svg)](https://codecov.io/gh/Sebuliba-Adrian/quorion-b2b-api)
+[![Code Quality](https://api.codeclimate.com/v1/badges/maintainability)](https://codeclimate.com/github/Sebuliba-Adrian/quorion-b2b-api)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/django-5.2.8-green.svg)](https://www.djangoproject.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-38%20passed-success)](https://github.com/Sebuliba-Adrian/quorion-b2b-api/actions)
 [![CodeQL](https://github.com/Sebuliba-Adrian/quorion-b2b-api/workflows/CodeQL%20Analysis/badge.svg)](https://github.com/Sebuliba-Adrian/quorion-b2b-api/security/code-scanning)
 
-A fully functional Django REST API for B2B commerce with multi-tenant architecture. This system covers the complete transaction lifecycle from lead generation through price negotiation, order fulfillment, and shipping.
+A fully functional Django REST API for B2B distributor buyer-seller negotiation system. This MVP covers the complete transaction lifecycle from lead generation through price negotiation, order fulfillment, and shipping.
 
 **🎯 100% Test Coverage | ✅ All Tests Passing | 🚀 Production Ready**
 
 ## Features
 
 ### ✅ Complete Transaction Lifecycle
+- **Shopping Cart**: Full-featured cart with add/remove/update items, soft delete, cart-to-lead conversion
 - **Lead Management**: Create, forward to distributors, accept/reject
 - **Quote Negotiation**: Multi-step price negotiation with state machine
 - **Order Processing**: Full order fulfillment workflow
@@ -79,6 +81,17 @@ python manage.py runserver
 The API will be available at `http://localhost:8000/`
 
 ## API Endpoints
+
+### Shopping Cart
+- `POST /api/commerce/carts/` - Create a new cart
+- `GET /api/commerce/carts/` - List all carts
+- `GET /api/commerce/carts/{id}/` - Get cart details with items and totals
+- `PATCH /api/commerce/carts/{id}/` - Update cart
+- `DELETE /api/commerce/carts/{id}/` - Delete cart
+- `POST /api/commerce/carts/{id}/add_item/` - Add or update item in cart
+- `POST /api/commerce/carts/{id}/remove_item/` - Remove item from cart (soft delete)
+- `POST /api/commerce/carts/{id}/clear/` - Clear all items from cart
+- `POST /api/commerce/carts/{id}/convert_to_lead/` - Convert cart to lead
 
 ### Tenants
 - `GET/POST /api/tenants/tenants/` - List/create tenants

@@ -1,7 +1,31 @@
 from django.contrib import admin
-from .models import (Lead, QuoteRequest, QuoteRequestDetail, PurchaseOrder,
+from .models import (Customer, Cart, CartItem, Lead, QuoteRequest, QuoteRequestDetail, PurchaseOrder,
                     PurchaseOrderDetail, PriceTier, ShipmentAdvice,
                     DeliveryTerm, PaymentTerm, PaymentMode)
+
+
+@admin.register(Customer)
+class CustomerAdmin(admin.ModelAdmin):
+    list_display = ['full_name', 'email', 'company_name', 'tenant', 'credit_limit', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['first_name', 'last_name', 'email', 'company_name', 'tenant__name']
+    readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(Cart)
+class CartAdmin(admin.ModelAdmin):
+    list_display = ['id', 'buyer', 'is_active', 'total_items', 'subtotal', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['buyer__name']
+    readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(CartItem)
+class CartItemAdmin(admin.ModelAdmin):
+    list_display = ['id', 'cart', 'product', 'quantity', 'unit_price', 'total_price', 'deleted_at']
+    list_filter = ['deleted_at', 'created_at']
+    search_fields = ['product__name', 'cart__buyer__name']
+    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(Lead)

@@ -2,11 +2,61 @@
 Serializers for commerce models
 """
 from rest_framework import serializers
-from .models import (Lead, QuoteRequest, QuoteRequestDetail, PurchaseOrder, 
+from .models import (Customer, Cart, CartItem, Lead, QuoteRequest, QuoteRequestDetail, PurchaseOrder,
                     PurchaseOrderDetail, PriceTier, ShipmentAdvice,
                     DeliveryTerm, PaymentTerm, PaymentMode)
 from tenants.serializers import TenantSerializer, TenantAddressSerializer
 from products.serializers import ProductSerializer, ProductSKUSerializer
+
+
+class CustomerSerializer(serializers.ModelSerializer):
+    """Serializer for customers"""
+    full_name = serializers.CharField(read_only=True)
+    tenant_name = serializers.CharField(source='tenant.name', read_only=True)
+
+    class Meta:
+        model = Customer
+        fields = ['id', 'tenant', 'tenant_name', 'first_name', 'last_name', 'full_name',
+                 'email', 'phone', 'company_name', 'tax_id', 'credit_limit',
+                 'payment_terms_days', 'is_active', 'notes', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    """Serializer for cart items"""
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_sku = serializers.CharField(source='product.sku', read_only=True)
+    total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = CartItem
+        fields = ['id', 'cart', 'product', 'product_name', 'product_sku', 'quantity',
+                 'unit_price', 'total_price', 'notes', 'deleted_at', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'deleted_at', 'created_at', 'updated_at']
+
+
+class CartSerializer(serializers.ModelSerializer):
+    """Serializer for shopping carts"""
+    buyer_name = serializers.CharField(source='buyer.name', read_only=True, allow_null=True)
+    customer_name = serializers.CharField(source='customer.full_name', read_only=True, allow_null=True)
+    items = serializers.SerializerMethodField()
+    total_items = serializers.IntegerField(read_only=True)
+    total_quantity = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    is_anonymous = serializers.BooleanField(read_only=True)
+    is_expired = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Cart
+        fields = ['id', 'buyer', 'buyer_name', 'customer', 'customer_name', 'session_key',
+                 'is_active', 'expires_at', 'name', 'is_anonymous', 'is_expired',
+                 'items', 'total_items', 'total_quantity', 'subtotal', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_items(self, obj):
+        """Get only active (non-deleted) items"""
+        active_items = obj.items.filter(deleted_at__isnull=True)
+        return CartItemSerializer(active_items, many=True).data
 
 
 class DeliveryTermSerializer(serializers.ModelSerializer):
@@ -47,12 +97,14 @@ class PriceTierSerializer(serializers.ModelSerializer):
 class LeadSerializer(serializers.ModelSerializer):
     seller_name = serializers.CharField(source='seller.name', read_only=True)
     parent_lead_id = serializers.UUIDField(source='parent_lead.id', read_only=True, allow_null=True)
+    customer_name = serializers.CharField(source='customer.full_name', read_only=True, allow_null=True)
 
     class Meta:
         model = Lead
-        fields = ['id', 'seller', 'seller_name', 'buyer_first_name', 'buyer_last_name',
-                 'buyer_email', 'buyer_phone', 'buyer_company_name', 'status', 'parent_lead',
-                 'parent_lead_id', 'source', 'created_at', 'updated_at']
+        fields = ['id', 'seller', 'seller_name', 'cart', 'customer', 'customer_name',
+                 'buyer_first_name', 'buyer_last_name', 'buyer_email', 'buyer_phone',
+                 'buyer_company_name', 'status', 'parent_lead', 'parent_lead_id',
+                 'source', 'created_at', 'updated_at']
         read_only_fields = ['id', 'status', 'created_at', 'updated_at']
 
 

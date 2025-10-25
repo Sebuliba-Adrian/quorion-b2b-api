@@ -1,5 +1,5 @@
 """
-Views for commerce: Leads, Quotes, Orders, Shipping
+Views for commerce: Carts, Leads, Quotes, Orders, Shipping
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -9,11 +9,11 @@ from django.utils import timezone
 import random
 import string
 
-from .models import (Lead, QuoteRequest, QuoteRequestDetail, PurchaseOrder,
+from .models import (Customer, Cart, CartItem, Lead, QuoteRequest, QuoteRequestDetail, PurchaseOrder,
                     PurchaseOrderDetail, PriceTier, ShipmentAdvice,
                     DeliveryTerm, PaymentTerm, PaymentMode)
-from .serializers import (LeadSerializer, QuoteRequestSerializer, QuoteRequestDetailSerializer,
-                         PurchaseOrderSerializer, PurchaseOrderDetailSerializer,
+from .serializers import (CustomerSerializer, CartSerializer, CartItemSerializer, LeadSerializer, QuoteRequestSerializer,
+                         QuoteRequestDetailSerializer, PurchaseOrderSerializer, PurchaseOrderDetailSerializer,
                          PriceTierSerializer, ShipmentAdviceSerializer,
                          DeliveryTermSerializer, PaymentTermSerializer, PaymentModeSerializer)
 
@@ -34,10 +34,203 @@ def generate_order_number():
             return number
 
 
+class CustomerViewSet(viewsets.ModelViewSet):
+    """API endpoint for managing customers"""
+    queryset = Customer.objects.all()
+    serializer_class = CustomerSerializer
+    filterset_fields = ['tenant', 'email', 'is_active']
+
+
+class CartViewSet(viewsets.ModelViewSet):
+    """API endpoint for managing shopping carts"""
+    queryset = Cart.objects.all()
+    serializer_class = CartSerializer
+    filterset_fields = ['buyer', 'is_active']
+
+    @action(detail=True, methods=['post'])
+    def add_item(self, request, pk=None):
+        """Add or update item in cart"""
+        cart = self.get_object()
+        product_id = request.data.get('product')
+        quantity = request.data.get('quantity')
+        unit_price = request.data.get('unit_price')
+        notes = request.data.get('notes', '')
+
+        if not all([product_id, quantity, unit_price]):
+            return Response(
+                {'error': 'product, quantity, and unit_price are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            existing_item = CartItem.objects.filter(
+                cart=cart,
+                product_id=product_id,
+                deleted_at__isnull=True
+            ).first()
+
+            if existing_item:
+                existing_item.quantity = quantity
+                existing_item.unit_price = unit_price
+                existing_item.notes = notes
+                existing_item.save()
+                serializer = CartItemSerializer(existing_item)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                cart_item = CartItem.objects.create(
+                    cart=cart,
+                    product_id=product_id,
+                    quantity=quantity,
+                    unit_price=unit_price,
+                    notes=notes
+                )
+                serializer = CartItemSerializer(cart_item)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def remove_item(self, request, pk=None):
+        """Remove item from cart (soft delete)"""
+        cart = self.get_object()
+        item_id = request.data.get('item_id')
+
+        if not item_id:
+            return Response({'error': 'item_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cart_item = CartItem.objects.get(id=item_id, cart=cart, deleted_at__isnull=True)
+            cart_item.soft_delete()
+            return Response({'message': 'Item removed from cart'}, status=status.HTTP_200_OK)
+        except CartItem.DoesNotExist:
+            return Response({'error': 'Item not found in cart'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'])
+    def clear(self, request, pk=None):
+        """Clear all items from cart"""
+        cart = self.get_object()
+        cart.clear()
+        return Response({'message': 'Cart cleared'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def convert_to_lead(self, request, pk=None):
+        """Convert cart to a lead"""
+        cart = self.get_object()
+
+        if cart.total_items == 0:
+            return Response({'error': 'Cannot convert empty cart to lead'}, status=status.HTTP_400_BAD_REQUEST)
+
+        seller_id = request.data.get('seller')
+        buyer_first_name = request.data.get('buyer_first_name')
+        buyer_last_name = request.data.get('buyer_last_name')
+        buyer_email = request.data.get('buyer_email')
+
+        if not all([seller_id, buyer_first_name, buyer_last_name, buyer_email]):
+            return Response(
+                {'error': 'seller, buyer_first_name, buyer_last_name, and buyer_email are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        lead = Lead.objects.create(
+            seller_id=seller_id,
+            cart=cart,
+            buyer_first_name=buyer_first_name,
+            buyer_last_name=buyer_last_name,
+            buyer_email=buyer_email,
+            buyer_phone=request.data.get('buyer_phone', ''),
+            buyer_company_name=request.data.get('buyer_company_name', '')
+        )
+        lead.create()
+        lead.save()
+
+        cart.is_active = False
+        cart.save()
+
+        return Response(LeadSerializer(lead).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def clone(self, request, pk=None):
+        """Clone cart for reordering"""
+        cart = self.get_object()
+        buyer_id = request.data.get('buyer')
+        customer_id = request.data.get('customer')
+
+        new_cart = cart.clone(buyer_id=buyer_id, customer_id=customer_id)
+        return Response(CartSerializer(new_cart).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def merge(self, request, pk=None):
+        """Merge another cart into this one"""
+        cart = self.get_object()
+        other_cart_id = request.data.get('other_cart_id')
+
+        if not other_cart_id:
+            return Response({'error': 'other_cart_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            other_cart = Cart.objects.get(id=other_cart_id)
+            cart.merge_with(other_cart)
+            return Response(CartSerializer(cart).data, status=status.HTTP_200_OK)
+        except Cart.DoesNotExist:
+            return Response({'error': 'Cart not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['get'])
+    def validate(self, request, pk=None):
+        """Validate cart"""
+        cart = self.get_object()
+        errors = cart.validate_cart()
+
+        if errors:
+            return Response({'valid': False, 'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'valid': True, 'errors': []}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def add_bulk_items(self, request, pk=None):
+        """Add multiple items to cart at once"""
+        cart = self.get_object()
+        items_data = request.data.get('items', [])
+
+        if not items_data:
+            return Response({'error': 'items array is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        added_items = []
+        for item_data in items_data:
+            product_id = item_data.get('product')
+            quantity = item_data.get('quantity')
+            unit_price = item_data.get('unit_price')
+
+            if not all([product_id, quantity, unit_price]):
+                continue
+
+            existing = cart.items.filter(product_id=product_id, deleted_at__isnull=True).first()
+            if existing:
+                existing.quantity += Decimal(str(quantity))
+                existing.save()
+                added_items.append(existing)
+            else:
+                item = CartItem.objects.create(
+                    cart=cart,
+                    product_id=product_id,
+                    quantity=quantity,
+                    unit_price=unit_price,
+                    notes=item_data.get('notes', '')
+                )
+                added_items.append(item)
+
+        return Response(CartItemSerializer(added_items, many=True).data, status=status.HTTP_201_CREATED)
+
+
+class CartItemViewSet(viewsets.ModelViewSet):
+    """API endpoint for managing cart items"""
+    queryset = CartItem.objects.filter(deleted_at__isnull=True)
+    serializer_class = CartItemSerializer
+    filterset_fields = ['cart', 'product']
+
+
 class LeadViewSet(viewsets.ModelViewSet):
     queryset = Lead.objects.all()
     serializer_class = LeadSerializer
-    filterset_fields = ['seller', 'status']
+    filterset_fields = ['seller', 'status', 'customer']
 
     @action(detail=True, methods=['post'])
     def create_lead(self, request, pk=None):
@@ -46,6 +239,20 @@ class LeadViewSet(viewsets.ModelViewSet):
         lead.create()
         lead.save()
         return Response(LeadSerializer(lead).data)
+
+    @action(detail=True, methods=['post'])
+    def convert_to_customer(self, request, pk=None):
+        """Convert lead to customer"""
+        lead = self.get_object()
+        credit_limit = request.data.get('credit_limit', '0.00')
+        payment_terms_days = request.data.get('payment_terms_days', 30)
+
+        customer = lead.convert_to_customer(
+            credit_limit=Decimal(str(credit_limit)),
+            payment_terms_days=int(payment_terms_days)
+        )
+
+        return Response(CustomerSerializer(customer).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
     def convert(self, request, pk=None):
