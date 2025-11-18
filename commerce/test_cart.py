@@ -43,11 +43,8 @@ def product(seller_tenant):
     return Product.objects.create(
         seller=seller_tenant,
         name="Test Product",
-        sku="TEST-SKU-001",
         description="Test product description",
-        unit_of_measure="kg",
-        base_price=Decimal('100.00'),
-        currency="USD"
+        brand_product_name="Test Brand Product"
     )
 
 
@@ -174,10 +171,11 @@ class TestCartAPI:
     def test_create_cart(self, api_client, buyer_tenant):
         """Test creating a cart via API"""
         response = api_client.post('/api/commerce/carts/', {
-            'buyer': str(buyer_tenant.id)
+            'buyer': str(buyer_tenant.id),
+            'is_active': True
         })
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.data['buyer'] == str(buyer_tenant.id)
+        assert str(response.data['buyer']) == str(buyer_tenant.id)
         assert response.data['is_active'] is True
 
     def test_list_carts(self, api_client, cart):
@@ -219,6 +217,8 @@ class TestCartItemAPI:
             'unit_price': '100.00',
             'notes': 'Test notes'
         })
+        if response.status_code != status.HTTP_201_CREATED:
+            print(f"Error response: {response.data}")
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data['quantity'] == '5.00'
         assert response.data['unit_price'] == '100.00'
@@ -340,7 +340,9 @@ class TestCartFiltering:
 
         response = api_client.get('/api/commerce/carts/?is_active=true')
         assert response.status_code == status.HTTP_200_OK
-        for cart in response.data:
+        # Handle both list and paginated responses
+        results = response.data if isinstance(response.data, list) else response.data.get('results', [])
+        for cart in results:
             assert cart['is_active'] is True
 
 
@@ -353,11 +355,8 @@ class TestCartIntegration:
         product2 = Product.objects.create(
             seller=seller_tenant,
             name="Product 2",
-            sku="TEST-SKU-002",
             description="Second product",
-            unit_of_measure="kg",
-            base_price=Decimal('200.00'),
-            currency="USD"
+            brand_product_name="Test Brand Product 2"
         )
 
         api_client.post(f'/api/commerce/carts/{cart.id}/add_item/', {

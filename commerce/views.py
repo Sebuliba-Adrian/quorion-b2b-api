@@ -50,6 +50,8 @@ class CartViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def add_item(self, request, pk=None):
         """Add or update item in cart"""
+        from decimal import Decimal
+
         cart = self.get_object()
         product_id = request.data.get('product')
         quantity = request.data.get('quantity')
@@ -63,6 +65,22 @@ class CartViewSet(viewsets.ModelViewSet):
             )
 
         try:
+            # Convert to Decimal
+            quantity = Decimal(str(quantity))
+            unit_price = Decimal(str(unit_price))
+
+            # Validate quantity and price
+            if quantity <= 0:
+                return Response(
+                    {'error': 'Quantity must be greater than 0'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if unit_price < 0:
+                return Response(
+                    {'error': 'Unit price cannot be negative'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             existing_item = CartItem.objects.filter(
                 cart=cart,
                 product_id=product_id,
@@ -211,8 +229,8 @@ class CartViewSet(viewsets.ModelViewSet):
                 item = CartItem.objects.create(
                     cart=cart,
                     product_id=product_id,
-                    quantity=quantity,
-                    unit_price=unit_price,
+                    quantity=Decimal(str(quantity)),
+                    unit_price=Decimal(str(unit_price)),
                     notes=item_data.get('notes', '')
                 )
                 added_items.append(item)
