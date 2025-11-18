@@ -5,12 +5,12 @@
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/django-5.2.8-green.svg)](https://www.djangoproject.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-153%20passed-success)](https://github.com/Sebuliba-Adrian/quorion-b2b-api/actions)
+[![Tests](https://img.shields.io/badge/tests-199%20passed-success)](https://github.com/Sebuliba-Adrian/quorion-b2b-api/actions)
 [![CodeQL](https://github.com/Sebuliba-Adrian/quorion-b2b-api/workflows/CodeQL%20Analysis/badge.svg)](https://github.com/Sebuliba-Adrian/quorion-b2b-api/security/code-scanning)
 
 A fully functional Django REST API for B2B distributor buyer-seller negotiation system. This MVP covers the complete transaction lifecycle from lead generation through price negotiation, order fulfillment, and shipping.
 
-**🎯 98% Test Coverage | ✅ 153 Tests Passing | 🚀 Production Ready**
+**🎯 98% Test Coverage | ✅ 199 Tests Passing | 🚀 Production Ready**
 
 ## Features
 
@@ -37,6 +37,13 @@ A fully functional Django REST API for B2B distributor buyer-seller negotiation 
 - **SKU Types**: Product SKU, Distributor SKU, Buyer SKU
 - **Packaging**: Packaging types and units
 - **Price Tiers**: Volume-based pricing per buyer/destination
+
+### ✅ Flexible Marketplace Configuration
+- **Multiple Marketplace Modes**: B2B Negotiation, Direct Marketplace, Hybrid, Multi-Vendor
+- **30+ Feature Flags**: Granular control over marketplace behavior
+- **Seller Storefronts**: Individual seller marketplace configurations
+- **Global & Per-Seller Settings**: Override global settings per seller
+- **Cached Configuration**: High-performance configuration with Django caching
 
 ## Installation
 
@@ -99,6 +106,15 @@ The API will be available at `http://localhost:8000/`
 - `GET /api/tenants/tenants/{id}/distributors/` - Get distributors for seller
 - `GET/POST /api/tenants/addresses/` - Manage addresses
 - `GET/POST /api/tenants/associations/` - Manage tenant associations
+
+### Marketplace Configuration
+- `GET/POST /api/tenants/marketplace-config/` - List/create marketplace configurations
+- `GET/PUT/PATCH/DELETE /api/tenants/marketplace-config/{id}/` - Configuration details
+- `GET /api/tenants/marketplace-config/active/` - Get active marketplace configuration
+- `POST /api/tenants/marketplace-config/{id}/activate/` - Activate a configuration
+- `GET/POST /api/tenants/seller-marketplace/` - List/create seller marketplaces
+- `GET/PUT/PATCH/DELETE /api/tenants/seller-marketplace/{id}/` - Seller marketplace details
+- `GET /api/tenants/seller-marketplace/{id}/effective_settings/` - Get effective settings with global fallbacks
 
 ### Products
 - `GET/POST /api/products/products/` - List/create products
@@ -170,10 +186,11 @@ pytest commerce/tests.py::TestEndToEndFlow -v
 ```
 
 ### Test Coverage
-98% code coverage with 153 comprehensive tests:
+98% code coverage with 199 comprehensive tests:
 - ✅ Shopping cart with 59 tests (cart creation, items, conversion to lead)
 - ✅ Products & SKUs with 51 tests (100% coverage)
 - ✅ Tenants & associations with 43 tests (100% coverage)
+- ✅ Marketplace configuration with 46 tests (feature flags, modes, seller storefronts)
 - ✅ Lead creation and distributor forwarding
 - ✅ Quote negotiation flow (request → respond → accept)
 - ✅ Price tier resolution
@@ -374,9 +391,11 @@ quorion-b2b-api/
 │   └── wsgi.py
 ├── tenants/             # Tenant management app
 │   ├── models.py        # Tenant, TenantAddress, TenantAssociation
+│   ├── marketplace_config.py  # MarketplaceConfig, SellerMarketplace
 │   ├── serializers.py
 │   ├── views.py
-│   └── urls.py
+│   ├── urls.py
+│   └── test_marketplace_config.py  # Marketplace configuration tests
 ├── products/            # Product management app
 │   ├── models.py        # Product, ProductSKU, PackagingType, PackagingUnit, ListPrice
 │   ├── serializers.py
@@ -413,9 +432,113 @@ quorion-b2b-api/
 - Invalid transitions are prevented
 - Automatic state updates
 
+### Marketplace Configuration System
+The platform includes a flexible marketplace configuration system that allows administrators to switch between different marketplace modes and control feature availability through feature flags.
+
+#### Marketplace Modes
+- **B2B Negotiation**: Traditional B2B workflow with leads, quotes, and order negotiation
+- **Direct Marketplace**: E-commerce style direct purchases with shopping cart
+- **Hybrid**: Supports both B2B negotiation and direct purchases
+- **Multi-Vendor**: Multiple sellers with individual storefronts
+
+#### Feature Flag Categories
+- **Cart & Shopping**: Shopping cart, guest checkout, wishlist
+- **B2B Features**: Lead generation, quote negotiation, distributor network
+- **Direct Purchase**: Direct purchase, instant checkout
+- **Multi-Vendor**: Multiple sellers, seller storefronts, cross-seller cart
+- **Pricing**: Dynamic pricing, volume discounts, promotional pricing
+- **Customer Management**: Customer accounts, customer portal, saved addresses
+- **Payment**: Online payment, credit terms, partial payments
+- **Reviews & Ratings**: Product reviews, seller ratings
+
+#### Configuration Examples
+
+**Create B2B Marketplace Configuration**
+```bash
+POST /api/tenants/marketplace-config/
+{
+  "name": "B2B Marketplace",
+  "mode": "b2b_negotiation",
+  "is_active": true,
+  "enable_shopping_cart": true,
+  "enable_lead_generation": true,
+  "enable_quote_negotiation": true,
+  "require_quote_approval": true,
+  "enable_distributor_network": true
+}
+```
+
+**Create Direct Marketplace Configuration**
+```bash
+POST /api/tenants/marketplace-config/
+{
+  "name": "Direct Marketplace",
+  "mode": "direct_marketplace",
+  "is_active": true,
+  "enable_shopping_cart": true,
+  "enable_direct_purchase": true,
+  "enable_instant_checkout": true,
+  "enable_online_payment": true,
+  "show_prices_to_guests": true
+}
+```
+
+**Create Seller Storefront**
+```bash
+POST /api/tenants/seller-marketplace/
+{
+  "seller": "<seller_id>",
+  "storefront_name": "Acme Chemicals Marketplace",
+  "storefront_slug": "acme-chemicals",
+  "description": "Your trusted chemical supplier",
+  "is_active": true,
+  "allow_direct_purchase": true,
+  "min_order_value": "500.00"
+}
+```
+
+**Get Active Marketplace Configuration**
+```bash
+GET /api/tenants/marketplace-config/active/
+```
+
+**Get Effective Settings for Seller**
+```bash
+GET /api/tenants/seller-marketplace/{id}/effective_settings/
+```
+
+#### Using Feature Flags in Code
+```python
+from tenants.marketplace_config import (
+    is_feature_enabled,
+    get_marketplace_mode,
+    is_b2b_mode,
+    is_marketplace_mode
+)
+
+# Check if a feature is enabled
+if is_feature_enabled('enable_shopping_cart'):
+    # Enable shopping cart functionality
+    pass
+
+# Get current marketplace mode
+mode = get_marketplace_mode()
+
+# Check marketplace type
+if is_b2b_mode():
+    # Use B2B workflow
+    pass
+elif is_marketplace_mode():
+    # Use marketplace workflow
+    pass
+```
+
 ## Admin Interface
 
 Access the Django admin at `http://localhost:8000/admin/` to:
+- **Configure Marketplace**: Switch between B2B, Direct, Hybrid, or Multi-Vendor modes
+- **Manage Feature Flags**: Enable/disable specific marketplace features
+- **Create Seller Storefronts**: Set up individual seller marketplaces
 - Manage tenants, products, and SKUs
 - View and manage quotes and orders
 - Configure price tiers
