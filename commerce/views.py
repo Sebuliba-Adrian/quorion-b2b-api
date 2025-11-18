@@ -1,6 +1,7 @@
 """
 Views for commerce: Carts, Leads, Quotes, Orders, Shipping
 """
+from decimal import Decimal
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -50,8 +51,6 @@ class CartViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def add_item(self, request, pk=None):
         """Add or update item in cart"""
-        from decimal import Decimal
-
         cart = self.get_object()
         product_id = request.data.get('product')
         quantity = request.data.get('quantity')
