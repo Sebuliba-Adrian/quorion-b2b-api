@@ -1,6 +1,7 @@
 """
 Product and SKU models
 """
+
 from django.db import models
 from django.core.validators import MinValueValidator
 from decimal import Decimal
@@ -8,21 +9,22 @@ import uuid
 
 
 class ProductStatus(models.TextChoices):
-    DRAFT = 'draft', 'Draft'
-    PUBLISHED = 'published', 'Published'
-    ARCHIVED = 'archived', 'Archived'
+    DRAFT = "draft", "Draft"
+    PUBLISHED = "published", "Published"
+    ARCHIVED = "archived", "Archived"
 
 
 class SKUKind(models.TextChoices):
-    PRODUCT_SKU = 'product_sku', 'Product SKU'
-    DISTRIBUTOR_SKU = 'distributor_sku', 'Distributor SKU'
-    BUYER_SKU = 'buyer_sku', 'Buyer SKU'
+    PRODUCT_SKU = "product_sku", "Product SKU"
+    DISTRIBUTOR_SKU = "distributor_sku", "Distributor SKU"
+    BUYER_SKU = "buyer_sku", "Buyer SKU"
 
 
 class Product(models.Model):
     """Base product model"""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    seller = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='products')
+    seller = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="products")
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     brand_product_name = models.CharField(max_length=255)
@@ -32,8 +34,8 @@ class Product(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'product'
-        ordering = ['name']
+        db_table = "product"
+        ordering = ["name"]
 
     def __str__(self):
         return f"{self.name} ({self.seller.name})"
@@ -41,14 +43,15 @@ class Product(models.Model):
 
 class PackagingType(models.Model):
     """Packaging type (e.g., Drum, Bag, Bottle)"""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'packaging_type'
-        ordering = ['name']
+        db_table = "packaging_type"
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
@@ -56,14 +59,15 @@ class PackagingType(models.Model):
 
 class PackagingUnit(models.Model):
     """Packaging unit (e.g., kg, L, gal)"""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=50, unique=True)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'packaging_unit'
-        ordering = ['name']
+        db_table = "packaging_unit"
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
@@ -71,26 +75,30 @@ class PackagingUnit(models.Model):
 
 class ProductSKU(models.Model):
     """Product SKU with packaging information"""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='skus')
-    distributor = models.ForeignKey('tenants.Tenant', on_delete=models.SET_NULL, 
-                                   blank=True, null=True, related_name='distributed_skus')
-    buyer = models.ForeignKey('tenants.Tenant', on_delete=models.SET_NULL,
-                            blank=True, null=True, related_name='buyer_skus')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="skus")
+    distributor = models.ForeignKey(
+        "tenants.Tenant", on_delete=models.SET_NULL, blank=True, null=True, related_name="distributed_skus"
+    )
+    buyer = models.ForeignKey(
+        "tenants.Tenant", on_delete=models.SET_NULL, blank=True, null=True, related_name="buyer_skus"
+    )
     number = models.CharField(max_length=100, unique=True)
     name = models.CharField(max_length=255, blank=True, null=True)
     kind = models.CharField(max_length=20, choices=SKUKind.choices, default=SKUKind.PRODUCT_SKU)
     packaging_type = models.ForeignKey(PackagingType, on_delete=models.PROTECT)
     packaging_unit = models.ForeignKey(PackagingUnit, on_delete=models.PROTECT)
-    package_volume = models.DecimalField(max_digits=10, decimal_places=2,
-                                         validators=[MinValueValidator(Decimal('0.01'))])
+    package_volume = models.DecimalField(
+        max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))]
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'product_sku'
-        ordering = ['product', 'number']
+        db_table = "product_sku"
+        ordering = ["product", "number"]
 
     def __str__(self):
         return f"{self.product.name} - {self.number}"
@@ -126,18 +134,18 @@ class ProductSKU(models.Model):
 
 class ListPrice(models.Model):
     """Base list price for SKU"""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    sku = models.ForeignKey(ProductSKU, on_delete=models.CASCADE, related_name='list_prices')
-    price = models.DecimalField(max_digits=10, decimal_places=2,
-                               validators=[MinValueValidator(Decimal('0.01'))])
-    currency = models.CharField(max_length=3, default='USD')
+    sku = models.ForeignKey(ProductSKU, on_delete=models.CASCADE, related_name="list_prices")
+    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+    currency = models.CharField(max_length=3, default="USD")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'list_price'
-        ordering = ['sku', '-created_at']
+        db_table = "list_price"
+        ordering = ["sku", "-created_at"]
 
     def __str__(self):
         return f"{self.sku.number} - {self.price} {self.currency}"

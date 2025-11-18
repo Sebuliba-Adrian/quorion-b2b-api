@@ -1,20 +1,26 @@
 """
 Views for product management
 """
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Product, ProductSKU, PackagingType, PackagingUnit, ListPrice
-from .serializers import (ProductSerializer, ProductSKUSerializer, PackagingTypeSerializer,
-                         PackagingUnitSerializer, ListPriceSerializer)
+from .serializers import (
+    ProductSerializer,
+    ProductSKUSerializer,
+    PackagingTypeSerializer,
+    PackagingUnitSerializer,
+    ListPriceSerializer,
+)
 
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    filterset_fields = ['seller', 'status', 'is_active']
+    filterset_fields = ["seller", "status", "is_active"]
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def create_sku(self, request, pk=None):
         """Create SKU for product"""
         product = self.get_object()
@@ -28,24 +34,23 @@ class ProductViewSet(viewsets.ModelViewSet):
 class ProductSKUViewSet(viewsets.ModelViewSet):
     queryset = ProductSKU.objects.all()
     serializer_class = ProductSKUSerializer
-    filterset_fields = ['product', 'distributor', 'buyer', 'kind', 'is_active']
+    filterset_fields = ["product", "distributor", "buyer", "kind", "is_active"]
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def create_distributor_copy(self, request, pk=None):
         """Create distributor copy of SKU"""
         sku = self.get_object()
-        distributor_id = request.data.get('distributor_id')
+        distributor_id = request.data.get("distributor_id")
         if not distributor_id:
-            return Response({'error': 'distributor_id required'}, 
-                          status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response({"error": "distributor_id required"}, status=status.HTTP_400_BAD_REQUEST)
+
         from tenants.models import Tenant
+
         try:
-            distributor = Tenant.objects.get(id=distributor_id, type='distributor')
+            distributor = Tenant.objects.get(id=distributor_id, type="distributor")
         except Tenant.DoesNotExist:
-            return Response({'error': 'Distributor not found'}, 
-                          status=status.HTTP_404_NOT_FOUND)
-        
+            return Response({"error": "Distributor not found"}, status=status.HTTP_404_NOT_FOUND)
+
         distributor_sku = sku.create_distributor_copy(distributor)
         serializer = self.get_serializer(distributor_sku)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -64,4 +69,4 @@ class PackagingUnitViewSet(viewsets.ModelViewSet):
 class ListPriceViewSet(viewsets.ModelViewSet):
     queryset = ListPrice.objects.all()
     serializer_class = ListPriceSerializer
-    filterset_fields = ['sku', 'currency', 'is_active']
+    filterset_fields = ["sku", "currency", "is_active"]

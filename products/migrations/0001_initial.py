@@ -12,90 +12,163 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('tenants', '0001_initial'),
+        ("tenants", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='PackagingType',
+            name="PackagingType",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('description', models.TextField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("name", models.CharField(max_length=100, unique=True)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'db_table': 'packaging_type',
-                'ordering': ['name'],
+                "db_table": "packaging_type",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='PackagingUnit',
+            name="PackagingUnit",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=50, unique=True)),
-                ('description', models.TextField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("name", models.CharField(max_length=50, unique=True)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'db_table': 'packaging_unit',
-                'ordering': ['name'],
+                "db_table": "packaging_unit",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Product',
+            name="Product",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=255)),
-                ('description', models.TextField(blank=True, null=True)),
-                ('brand_product_name', models.CharField(max_length=255)),
-                ('status', models.CharField(choices=[('draft', 'Draft'), ('published', 'Published'), ('archived', 'Archived')], default='draft', max_length=20)),
-                ('is_active', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('seller', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='products', to='tenants.tenant')),
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("name", models.CharField(max_length=255)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("brand_product_name", models.CharField(max_length=255)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("draft", "Draft"), ("published", "Published"), ("archived", "Archived")],
+                        default="draft",
+                        max_length=20,
+                    ),
+                ),
+                ("is_active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "seller",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="products", to="tenants.tenant"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'product',
-                'ordering': ['name'],
+                "db_table": "product",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='ProductSKU',
+            name="ProductSKU",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('number', models.CharField(max_length=100, unique=True)),
-                ('name', models.CharField(blank=True, max_length=255, null=True)),
-                ('kind', models.CharField(choices=[('product_sku', 'Product SKU'), ('distributor_sku', 'Distributor SKU'), ('buyer_sku', 'Buyer SKU')], default='product_sku', max_length=20)),
-                ('package_volume', models.DecimalField(decimal_places=2, max_digits=10, validators=[django.core.validators.MinValueValidator(Decimal('0.01'))])),
-                ('is_active', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('buyer', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='buyer_skus', to='tenants.tenant')),
-                ('distributor', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='distributed_skus', to='tenants.tenant')),
-                ('packaging_type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='products.packagingtype')),
-                ('packaging_unit', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='products.packagingunit')),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='skus', to='products.product')),
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("number", models.CharField(max_length=100, unique=True)),
+                ("name", models.CharField(blank=True, max_length=255, null=True)),
+                (
+                    "kind",
+                    models.CharField(
+                        choices=[
+                            ("product_sku", "Product SKU"),
+                            ("distributor_sku", "Distributor SKU"),
+                            ("buyer_sku", "Buyer SKU"),
+                        ],
+                        default="product_sku",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "package_volume",
+                    models.DecimalField(
+                        decimal_places=2,
+                        max_digits=10,
+                        validators=[django.core.validators.MinValueValidator(Decimal("0.01"))],
+                    ),
+                ),
+                ("is_active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "buyer",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="buyer_skus",
+                        to="tenants.tenant",
+                    ),
+                ),
+                (
+                    "distributor",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="distributed_skus",
+                        to="tenants.tenant",
+                    ),
+                ),
+                (
+                    "packaging_type",
+                    models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="products.packagingtype"),
+                ),
+                (
+                    "packaging_unit",
+                    models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="products.packagingunit"),
+                ),
+                (
+                    "product",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="skus", to="products.product"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'product_sku',
-                'ordering': ['product', 'number'],
+                "db_table": "product_sku",
+                "ordering": ["product", "number"],
             },
         ),
         migrations.CreateModel(
-            name='ListPrice',
+            name="ListPrice",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('price', models.DecimalField(decimal_places=2, max_digits=10, validators=[django.core.validators.MinValueValidator(Decimal('0.01'))])),
-                ('currency', models.CharField(default='USD', max_length=3)),
-                ('is_active', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('sku', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='list_prices', to='products.productsku')),
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                (
+                    "price",
+                    models.DecimalField(
+                        decimal_places=2,
+                        max_digits=10,
+                        validators=[django.core.validators.MinValueValidator(Decimal("0.01"))],
+                    ),
+                ),
+                ("currency", models.CharField(default="USD", max_length=3)),
+                ("is_active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "sku",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="list_prices",
+                        to="products.productsku",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'list_price',
-                'ordering': ['sku', '-created_at'],
+                "db_table": "list_price",
+                "ordering": ["sku", "-created_at"],
             },
         ),
     ]

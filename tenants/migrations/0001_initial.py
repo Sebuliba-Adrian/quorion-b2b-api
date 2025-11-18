@@ -10,62 +10,86 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Tenant',
+            name="Tenant",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=255)),
-                ('type', models.CharField(choices=[('seller', 'Seller'), ('buyer', 'Buyer'), ('distributor', 'Distributor')], max_length=20)),
-                ('email', models.EmailField(max_length=254, validators=[django.core.validators.EmailValidator()])),
-                ('phone', models.CharField(blank=True, max_length=50, null=True)),
-                ('is_active', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[("seller", "Seller"), ("buyer", "Buyer"), ("distributor", "Distributor")],
+                        max_length=20,
+                    ),
+                ),
+                ("email", models.EmailField(max_length=254, validators=[django.core.validators.EmailValidator()])),
+                ("phone", models.CharField(blank=True, max_length=50, null=True)),
+                ("is_active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'db_table': 'tenant',
-                'ordering': ['name'],
+                "db_table": "tenant",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='TenantAddress',
+            name="TenantAddress",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('address_type', models.CharField(max_length=50)),
-                ('address1', models.CharField(max_length=255)),
-                ('address2', models.CharField(blank=True, max_length=255, null=True)),
-                ('city', models.CharField(max_length=100)),
-                ('state', models.CharField(blank=True, max_length=100, null=True)),
-                ('zip_code', models.CharField(max_length=20)),
-                ('country', models.CharField(max_length=100)),
-                ('is_active', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('tenant', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='addresses', to='tenants.tenant')),
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("address_type", models.CharField(max_length=50)),
+                ("address1", models.CharField(max_length=255)),
+                ("address2", models.CharField(blank=True, max_length=255, null=True)),
+                ("city", models.CharField(max_length=100)),
+                ("state", models.CharField(blank=True, max_length=100, null=True)),
+                ("zip_code", models.CharField(max_length=20)),
+                ("country", models.CharField(max_length=100)),
+                ("is_active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "tenant",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="addresses", to="tenants.tenant"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'tenant_address',
-                'ordering': ['tenant', 'address_type'],
+                "db_table": "tenant_address",
+                "ordering": ["tenant", "address_type"],
             },
         ),
         migrations.CreateModel(
-            name='TenantAssociation',
+            name="TenantAssociation",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('storefront_id', models.UUIDField(blank=True, null=True)),
-                ('is_active', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('buyer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='seller_associations', to='tenants.tenant')),
-                ('seller', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='buyer_associations', to='tenants.tenant')),
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("storefront_id", models.UUIDField(blank=True, null=True)),
+                ("is_active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "buyer",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="seller_associations",
+                        to="tenants.tenant",
+                    ),
+                ),
+                (
+                    "seller",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="buyer_associations",
+                        to="tenants.tenant",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'tenant_association',
-                'unique_together': {('seller', 'buyer', 'storefront_id')},
+                "db_table": "tenant_association",
+                "unique_together": {("seller", "buyer", "storefront_id")},
             },
         ),
     ]
