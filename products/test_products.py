@@ -287,7 +287,9 @@ class TestProductViews:
         response = api_client.post(f"/api/products/products/{product.id}/create_sku/", data)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_create_distributor_copy_action(self, api_client, product, packaging_type, packaging_unit, distributor_tenant):
+    def test_create_distributor_copy_action(
+        self, api_client, product, packaging_type, packaging_unit, distributor_tenant
+    ):
         """Test custom create_distributor_copy action"""
         # Create a unique SKU to test with
         test_sku = ProductSKU.objects.create(

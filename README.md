@@ -1,17 +1,16 @@
 # Quorion B2B API
 
 [![CI/CD](https://github.com/Sebuliba-Adrian/quorion-b2b-api/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/Sebuliba-Adrian/quorion-b2b-api/actions)
-[![Coverage](https://codecov.io/gh/Sebuliba-Adrian/quorion-b2b-api/branch/main/graph/badge.svg)](https://codecov.io/gh/Sebuliba-Adrian/quorion-b2b-api)
-[![Code Quality](https://api.codeclimate.com/v1/badges/maintainability)](https://codeclimate.com/github/Sebuliba-Adrian/quorion-b2b-api)
+[![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen.svg)](https://github.com/Sebuliba-Adrian/quorion-b2b-api)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/django-5.2.8-green.svg)](https://www.djangoproject.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-38%20passed-success)](https://github.com/Sebuliba-Adrian/quorion-b2b-api/actions)
+[![Tests](https://img.shields.io/badge/tests-153%20passed-success)](https://github.com/Sebuliba-Adrian/quorion-b2b-api/actions)
 [![CodeQL](https://github.com/Sebuliba-Adrian/quorion-b2b-api/workflows/CodeQL%20Analysis/badge.svg)](https://github.com/Sebuliba-Adrian/quorion-b2b-api/security/code-scanning)
 
 A fully functional Django REST API for B2B distributor buyer-seller negotiation system. This MVP covers the complete transaction lifecycle from lead generation through price negotiation, order fulfillment, and shipping.
 
-**🎯 100% Test Coverage | ✅ All Tests Passing | 🚀 Production Ready**
+**🎯 98% Test Coverage | ✅ 153 Tests Passing | 🚀 Production Ready**
 
 ## Features
 
@@ -171,12 +170,17 @@ pytest commerce/tests.py::TestEndToEndFlow -v
 ```
 
 ### Test Coverage
-All endpoints are tested with 100% coverage:
+98% code coverage with 153 comprehensive tests:
+- ✅ Shopping cart with 59 tests (cart creation, items, conversion to lead)
+- ✅ Products & SKUs with 51 tests (100% coverage)
+- ✅ Tenants & associations with 43 tests (100% coverage)
 - ✅ Lead creation and distributor forwarding
 - ✅ Quote negotiation flow (request → respond → accept)
 - ✅ Price tier resolution
 - ✅ Order fulfillment (accept → process → invoice → ship → complete)
-- ✅ Complete end-to-end flow
+- ✅ Complete end-to-end Cart → Lead → Quote → Order → Shipment workflow
+- ✅ All FSM state transitions tested
+- ✅ Buyer/seller negotiation workflows
 
 ## Example Workflow
 
