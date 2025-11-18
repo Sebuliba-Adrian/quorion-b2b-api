@@ -444,8 +444,9 @@ class TestCartAdvancedOperations:
 
     def test_cart_is_expired(self):
         """Test is_expired property"""
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
 
         expired_cart = Cart.objects.create(session_key="expired", expires_at=timezone.now() - timedelta(hours=1))
         assert expired_cart.is_expired is True
