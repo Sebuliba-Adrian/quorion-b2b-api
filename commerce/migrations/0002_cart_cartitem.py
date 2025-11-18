@@ -1,10 +1,11 @@
 # Generated migration for Customer, Cart and CartItem models
 
-from django.db import migrations, models
-import django.core.validators
-import django.db.models.deletion
 import uuid
 from decimal import Decimal
+
+import django.core.validators
+import django.db.models.deletion
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):

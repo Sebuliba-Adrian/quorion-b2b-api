@@ -2,44 +2,45 @@
 Views for commerce: Carts, Leads, Quotes, Orders, Shipping
 """
 
-from decimal import Decimal
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.db import transaction
-from django.utils import timezone
 import random
 import string
+from decimal import Decimal
+
+from django.db import transaction
+from django.utils import timezone
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from .models import (
-    Customer,
     Cart,
     CartItem,
+    Customer,
+    DeliveryTerm,
     Lead,
-    QuoteRequest,
-    QuoteRequestDetail,
+    PaymentMode,
+    PaymentTerm,
+    PriceTier,
     PurchaseOrder,
     PurchaseOrderDetail,
-    PriceTier,
+    QuoteRequest,
+    QuoteRequestDetail,
     ShipmentAdvice,
-    DeliveryTerm,
-    PaymentTerm,
-    PaymentMode,
 )
 from .serializers import (
-    CustomerSerializer,
-    CartSerializer,
     CartItemSerializer,
-    LeadSerializer,
-    QuoteRequestSerializer,
-    QuoteRequestDetailSerializer,
-    PurchaseOrderSerializer,
-    PurchaseOrderDetailSerializer,
-    PriceTierSerializer,
-    ShipmentAdviceSerializer,
+    CartSerializer,
+    CustomerSerializer,
     DeliveryTermSerializer,
-    PaymentTermSerializer,
+    LeadSerializer,
     PaymentModeSerializer,
+    PaymentTermSerializer,
+    PriceTierSerializer,
+    PurchaseOrderDetailSerializer,
+    PurchaseOrderSerializer,
+    QuoteRequestDetailSerializer,
+    QuoteRequestSerializer,
+    ShipmentAdviceSerializer,
 )
 
 
@@ -179,12 +180,29 @@ class CartViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def clone(self, request, pk=None):
         """Clone cart for reordering"""
+        from tenants.models import Tenant
+
         cart = self.get_object()
         buyer_id = request.data.get("buyer")
         customer_id = request.data.get("customer")
 
-        new_cart = cart.clone(buyer_id=buyer_id, customer_id=customer_id)
-        return Response(CartSerializer(new_cart).data, status=status.HTTP_201_CREATED)
+        buyer = None
+        customer = None
+
+        if buyer_id:
+            try:
+                buyer = Tenant.objects.get(id=buyer_id)
+            except Tenant.DoesNotExist:
+                pass
+
+        if customer_id:
+            try:
+                customer = Customer.objects.get(id=customer_id)
+            except Customer.DoesNotExist:
+                pass
+
+        new_cart = cart.clone(buyer=buyer, customer=customer)
+        return Response(CartSerializer(new_cart).data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"])
     def merge(self, request, pk=None):

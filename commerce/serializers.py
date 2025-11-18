@@ -3,23 +3,25 @@ Serializers for commerce models
 """
 
 from rest_framework import serializers
+
+from products.serializers import ProductSerializer, ProductSKUSerializer
+from tenants.serializers import TenantAddressSerializer, TenantSerializer
+
 from .models import (
-    Customer,
     Cart,
     CartItem,
+    Customer,
+    DeliveryTerm,
     Lead,
-    QuoteRequest,
-    QuoteRequestDetail,
+    PaymentMode,
+    PaymentTerm,
+    PriceTier,
     PurchaseOrder,
     PurchaseOrderDetail,
-    PriceTier,
+    QuoteRequest,
+    QuoteRequestDetail,
     ShipmentAdvice,
-    DeliveryTerm,
-    PaymentTerm,
-    PaymentMode,
 )
-from tenants.serializers import TenantSerializer, TenantAddressSerializer
-from products.serializers import ProductSerializer, ProductSKUSerializer
 
 
 class CustomerSerializer(serializers.ModelSerializer):

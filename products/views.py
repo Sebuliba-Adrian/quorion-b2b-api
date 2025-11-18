@@ -2,16 +2,17 @@
 Views for product management
 """
 
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Product, ProductSKU, PackagingType, PackagingUnit, ListPrice
+
+from .models import ListPrice, PackagingType, PackagingUnit, Product, ProductSKU
 from .serializers import (
-    ProductSerializer,
-    ProductSKUSerializer,
+    ListPriceSerializer,
     PackagingTypeSerializer,
     PackagingUnitSerializer,
-    ListPriceSerializer,
+    ProductSerializer,
+    ProductSKUSerializer,
 )
 
 

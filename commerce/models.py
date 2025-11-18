@@ -2,11 +2,12 @@
 Commerce models: Leads, Quotes, Orders, Shipping
 """
 
-from django.db import models
-from django.core.validators import MinValueValidator
-from django_fsm import FSMField, transition
-from decimal import Decimal
 import uuid
+from decimal import Decimal
+
+from django.core.validators import MinValueValidator
+from django.db import models
+from django_fsm import FSMField, transition
 
 
 class SalesLeadStatus(models.TextChoices):

@@ -3,6 +3,7 @@ Serializers for tenant models
 """
 
 from rest_framework import serializers
+
 from .models import Tenant, TenantAddress, TenantAssociation
 
 

@@ -3,8 +3,10 @@ Serializers for product models
 """
 
 from rest_framework import serializers
-from .models import Product, ProductSKU, PackagingType, PackagingUnit, ListPrice
+
 from tenants.serializers import TenantSerializer
+
+from .models import ListPrice, PackagingType, PackagingUnit, Product, ProductSKU
 
 
 class PackagingTypeSerializer(serializers.ModelSerializer):

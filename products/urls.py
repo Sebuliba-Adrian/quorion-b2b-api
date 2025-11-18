@@ -2,9 +2,10 @@
 URLs for products app
 """
 
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import ProductViewSet, ProductSKUViewSet, PackagingTypeViewSet, PackagingUnitViewSet, ListPriceViewSet
+
+from .views import ListPriceViewSet, PackagingTypeViewSet, PackagingUnitViewSet, ProductSKUViewSet, ProductViewSet
 
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")

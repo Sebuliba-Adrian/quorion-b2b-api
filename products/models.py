@@ -2,10 +2,11 @@
 Product and SKU models
 """
 
-from django.db import models
-from django.core.validators import MinValueValidator
-from decimal import Decimal
 import uuid
+from decimal import Decimal
+
+from django.core.validators import MinValueValidator
+from django.db import models
 
 
 class ProductStatus(models.TextChoices):

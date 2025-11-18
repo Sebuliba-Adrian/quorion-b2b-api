@@ -2,11 +2,12 @@
 Views for tenant management
 """
 
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
 from .models import Tenant, TenantAddress, TenantAssociation
-from .serializers import TenantSerializer, TenantAddressSerializer, TenantAssociationSerializer
+from .serializers import TenantAddressSerializer, TenantAssociationSerializer, TenantSerializer
 
 
 class TenantViewSet(viewsets.ModelViewSet):

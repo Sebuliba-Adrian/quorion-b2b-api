@@ -2,14 +2,16 @@
 Comprehensive tests for shopping cart functionality
 """
 
-import pytest
 from decimal import Decimal
+
+import pytest
 from django.utils import timezone
-from rest_framework.test import APIClient
 from rest_framework import status
-from tenants.models import Tenant, TenantType
-from products.models import Product
+from rest_framework.test import APIClient
+
 from commerce.models import Cart, CartItem, Lead, SalesLeadStatus
+from products.models import Product
+from tenants.models import Tenant, TenantType
 
 
 @pytest.fixture
@@ -379,3 +381,292 @@ class TestCartEdgeCases:
 
         assert cart_with_items.total_items == initial_total - 1
         assert cart_with_items.subtotal == Decimal("0.00")
+
+@pytest.mark.django_db
+class TestCartAdvancedOperations:
+    """Test advanced cart operations"""
+
+    def test_cart_clone(self, api_client, cart_with_items, buyer_tenant):
+        """Test cloning a cart"""
+        response = api_client.post(
+            f"/api/commerce/carts/{cart_with_items.id}/clone/",
+            {"buyer": str(buyer_tenant.id)}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        
+        cloned_cart_id = response.data["id"]
+        assert cloned_cart_id != str(cart_with_items.id)
+        
+        cloned_cart = Cart.objects.get(id=cloned_cart_id)
+        assert cloned_cart.total_items == cart_with_items.total_items
+        assert cloned_cart.subtotal == cart_with_items.subtotal
+
+    def test_cart_merge(self, api_client, cart_with_items, product, seller_tenant, buyer_tenant):
+        """Test merging two carts"""
+        # Create a second cart for merging
+        cart2 = Cart.objects.create(buyer=buyer_tenant)
+
+        product2 = Product.objects.create(
+            seller=seller_tenant,
+            name="Product 2",
+            description="Second product",
+            brand_product_name="Test Brand Product 2",
+        )
+
+        api_client.post(
+            f"/api/commerce/carts/{cart2.id}/add_item/",
+            {"product": str(product2.id), "quantity": "3.00", "unit_price": "75.00"}
+        )
+
+        initial_total = cart_with_items.total_items
+
+        response = api_client.post(
+            f"/api/commerce/carts/{cart_with_items.id}/merge/",
+            {"other_cart_id": str(cart2.id)}
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        cart_with_items.refresh_from_db()
+        assert cart_with_items.total_items == initial_total + 1
+
+        cart2.refresh_from_db()
+        assert cart2.is_active is False
+
+    def test_cart_validate_success(self, api_client, cart_with_items):
+        """Test validating a valid cart"""
+        response = api_client.get(f"/api/commerce/carts/{cart_with_items.id}/validate/")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["valid"] is True
+        assert response.data["errors"] == []
+
+    def test_cart_is_anonymous(self, buyer_tenant):
+        """Test is_anonymous property"""
+        anonymous_cart = Cart.objects.create(session_key="test-session-123")
+        assert anonymous_cart.is_anonymous is True
+        
+        buyer_cart = Cart.objects.create(buyer=buyer_tenant)
+        assert buyer_cart.is_anonymous is False
+
+    def test_cart_is_expired(self):
+        """Test is_expired property"""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        expired_cart = Cart.objects.create(
+            session_key="expired",
+            expires_at=timezone.now() - timedelta(hours=1)
+        )
+        assert expired_cart.is_expired is True
+        
+        active_cart = Cart.objects.create(
+            session_key="active",
+            expires_at=timezone.now() + timedelta(hours=1)
+        )
+        assert active_cart.is_expired is False
+        
+        no_expiry_cart = Cart.objects.create(session_key="no-expiry")
+        assert no_expiry_cart.is_expired is False
+
+    def test_bulk_add_items(self, api_client, cart, product, seller_tenant):
+        """Test adding multiple items at once"""
+        product2 = Product.objects.create(
+            seller=seller_tenant,
+            name="Product 2",
+            description="Second product",
+            brand_product_name="Test Brand Product 2",
+        )
+
+        response = api_client.post(
+            f"/api/commerce/carts/{cart.id}/add_bulk_items/",
+            {
+                "items": [
+                    {"product": str(product.id), "quantity": "2.00", "unit_price": "50.00"},
+                    {"product": str(product2.id), "quantity": "3.00", "unit_price": "75.00"}
+                ]
+            },
+            format="json"
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        assert len(response.data) == 2
+
+        cart.refresh_from_db()
+        assert cart.total_items == 2
+
+    def test_bulk_add_empty_items(self, api_client, cart):
+        """Test bulk add with empty items array"""
+        response = api_client.post(
+            f"/api/commerce/carts/{cart.id}/add_bulk_items/",
+            {"items": []}
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_clone_missing_buyer(self, api_client, cart_with_items):
+        """Test cloning without buyer specified"""
+        response = api_client.post(
+            f"/api/commerce/carts/{cart_with_items.id}/clone/",
+            {}
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_merge_missing_cart_id(self, api_client, cart):
+        """Test merge with missing cart ID"""
+        response = api_client.post(
+            f"/api/commerce/carts/{cart.id}/merge/",
+            {}
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_merge_nonexistent_cart(self, api_client, cart):
+        """Test merge with non-existent cart"""
+        import uuid
+        response = api_client.post(
+            f"/api/commerce/carts/{cart.id}/merge/",
+            {"other_cart_id": str(uuid.uuid4())}
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+class TestCustomerModel:
+    """Test Customer model"""
+
+    def test_customer_creation(self, seller_tenant):
+        """Test creating a customer"""
+        from commerce.models import Customer
+        
+        customer = Customer.objects.create(
+            tenant=seller_tenant,
+            first_name="John",
+            last_name="Doe",
+            email="john.doe@example.com",
+            phone="+1234567890",
+            company_name="Test Company",
+            credit_limit=Decimal("50000.00"),
+            payment_terms_days=30
+        )
+        
+        assert customer.id is not None
+        assert customer.full_name == "John Doe"
+        assert customer.email == "john.doe@example.com"
+        assert customer.is_active is True
+
+    def test_lead_to_customer_conversion(self, api_client, seller_tenant):
+        """Test converting a lead to a customer"""
+        from commerce.models import Lead, SalesLeadStatus
+
+        lead = Lead.objects.create(
+            seller=seller_tenant,
+            buyer_first_name="Jane",
+            buyer_last_name="Smith",
+            buyer_email="jane.smith@example.com",
+            buyer_phone="+9876543210",
+            buyer_company_name="Smith Industries"
+        )
+        lead.create()
+        lead.save()
+
+        response = api_client.post(
+            f"/api/commerce/leads/{lead.id}/convert_to_customer/",
+            {"credit_limit": "100000.00", "payment_terms_days": 60}
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["first_name"] == "Jane"
+        assert response.data["email"] == "jane.smith@example.com"
+        assert response.data["credit_limit"] == "100000.00"
+
+        # Check lead-customer linkage without refresh_from_db (FSM field issue)
+        updated_lead = Lead.objects.get(id=lead.id)
+        assert updated_lead.customer is not None
+
+    def test_customer_str_representation(self, seller_tenant):
+        """Test customer string representation"""
+        from commerce.models import Customer
+
+        customer = Customer.objects.create(
+            tenant=seller_tenant,
+            first_name="John",
+            last_name="Doe",
+            email="john@example.com"
+        )
+
+        assert str(customer) == "John Doe - john@example.com"
+
+
+@pytest.mark.django_db
+class TestAnonymousCarts:
+    """Test anonymous cart functionality"""
+
+    def test_create_anonymous_cart(self, api_client):
+        """Test creating an anonymous cart"""
+        response = api_client.post(
+            "/api/commerce/carts/",
+            {"session_key": "anonymous-session-456", "name": "Guest Cart"}
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["session_key"] == "anonymous-session-456"
+        assert response.data["is_anonymous"] is True
+
+    def test_anonymous_cart_with_items(self, api_client, product):
+        """Test adding items to anonymous cart"""
+        cart_response = api_client.post(
+            "/api/commerce/carts/",
+            {"session_key": "anonymous-session-789"}
+        )
+        cart_id = cart_response.data["id"]
+        
+        item_response = api_client.post(
+            f"/api/commerce/carts/{cart_id}/add_item/",
+            {"product": str(product.id), "quantity": "2.00", "unit_price": "100.00"}
+        )
+        assert item_response.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.django_db
+class TestCartItemValidation:
+    """Test cart item validation"""
+
+    def test_add_item_invalid_decimal(self, api_client, cart, product):
+        """Test adding item with invalid decimal value"""
+        response = api_client.post(
+            f"/api/commerce/carts/{cart.id}/add_item/",
+            {"product": str(product.id), "quantity": "invalid", "unit_price": "100.00"}
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_cart_item_update_via_api(self, api_client, cart_with_items):
+        """Test updating cart item directly"""
+        item = cart_with_items.items.first()
+        
+        response = api_client.patch(
+            f"/api/commerce/cart-items/{item.id}/",
+            {"quantity": "10.00"}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["quantity"] == "10.00"
+
+
+@pytest.mark.django_db
+class TestCartSerialization:
+    """Test cart serialization"""
+
+    def test_cart_with_customer(self, buyer_tenant, seller_tenant):
+        """Test cart with customer field"""
+        from commerce.models import Cart, Customer
+
+        customer = Customer.objects.create(
+            tenant=seller_tenant,
+            first_name="Test",
+            last_name="Customer",
+            email="test@customer.com"
+        )
+
+        cart = Cart.objects.create(buyer=buyer_tenant, customer=customer)
+
+        from commerce.serializers import CartSerializer
+
+        serializer = CartSerializer(cart)
+
+        assert str(serializer.data["customer"]) == str(customer.id)
+        assert serializer.data["customer_name"] == "Test Customer"
+

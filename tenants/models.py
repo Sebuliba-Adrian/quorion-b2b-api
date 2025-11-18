@@ -2,9 +2,10 @@
 Tenant models for multi-tenant architecture
 """
 
-from django.db import models
-from django.core.validators import EmailValidator
 import uuid
+
+from django.core.validators import EmailValidator
+from django.db import models
 
 
 class TenantType(models.TextChoices):

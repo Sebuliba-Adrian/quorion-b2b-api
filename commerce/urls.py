@@ -2,22 +2,23 @@
 URLs for commerce app
 """
 
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
 from .views import (
-    CustomerViewSet,
-    CartViewSet,
     CartItemViewSet,
-    LeadViewSet,
-    QuoteRequestViewSet,
-    QuoteRequestDetailViewSet,
-    PurchaseOrderViewSet,
-    PurchaseOrderDetailViewSet,
-    PriceTierViewSet,
-    ShipmentAdviceViewSet,
+    CartViewSet,
+    CustomerViewSet,
     DeliveryTermViewSet,
-    PaymentTermViewSet,
+    LeadViewSet,
     PaymentModeViewSet,
+    PaymentTermViewSet,
+    PriceTierViewSet,
+    PurchaseOrderDetailViewSet,
+    PurchaseOrderViewSet,
+    QuoteRequestDetailViewSet,
+    QuoteRequestViewSet,
+    ShipmentAdviceViewSet,
 )
 
 router = DefaultRouter()

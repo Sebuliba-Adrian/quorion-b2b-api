@@ -1,18 +1,19 @@
 from django.contrib import admin
+
 from .models import (
-    Customer,
     Cart,
     CartItem,
+    Customer,
+    DeliveryTerm,
     Lead,
-    QuoteRequest,
-    QuoteRequestDetail,
+    PaymentMode,
+    PaymentTerm,
+    PriceTier,
     PurchaseOrder,
     PurchaseOrderDetail,
-    PriceTier,
+    QuoteRequest,
+    QuoteRequestDetail,
     ShipmentAdvice,
-    DeliveryTerm,
-    PaymentTerm,
-    PaymentMode,
 )
 
 

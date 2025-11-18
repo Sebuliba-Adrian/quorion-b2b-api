@@ -2,26 +2,27 @@
 Comprehensive tests for commerce endpoints
 """
 
-import pytest
 from decimal import Decimal
-from django.utils import timezone
-from rest_framework.test import APIClient
-from rest_framework import status
 
-from tenants.models import Tenant, TenantAddress, TenantAssociation
-from products.models import Product, ProductSKU, PackagingType, PackagingUnit
+import pytest
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.test import APIClient
+
 from commerce.models import (
+    DeliveryTerm,
     Lead,
-    QuoteRequest,
-    QuoteRequestDetail,
+    PaymentMode,
+    PaymentTerm,
+    PriceTier,
     PurchaseOrder,
     PurchaseOrderDetail,
-    PriceTier,
+    QuoteRequest,
+    QuoteRequestDetail,
     ShipmentAdvice,
-    DeliveryTerm,
-    PaymentTerm,
-    PaymentMode,
 )
+from products.models import PackagingType, PackagingUnit, Product, ProductSKU
+from tenants.models import Tenant, TenantAddress, TenantAssociation
 
 
 @pytest.fixture
