@@ -10,7 +10,19 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from tenants.permissions import (
+    CanAccessLead,
+    CanAccessOrder,
+    CanAccessQuote,
+    IsBuyer,
+    IsBuyerOrSeller,
+    IsSeller,
+    IsSellerOrDistributor,
+    IsTenantOwner,
+)
 
 from .models import (
     Cart,
@@ -74,6 +86,22 @@ class CartViewSet(viewsets.ModelViewSet):
     queryset = Cart.objects.all()
     serializer_class = CartSerializer
     filterset_fields = ["buyer", "is_active"]
+
+    def get_permissions(self):
+        """
+        Anonymous users can create carts and add items (guest shopping)
+        Authentication required for checkout operations (convert_to_lead, etc.)
+        """
+        from rest_framework.permissions import AllowAny
+
+        # Allow anonymous cart creation and item management
+        if self.action in ['create', 'list', 'retrieve', 'add_item', 'remove_item', 'add_bulk_items']:
+            return [AllowAny()]
+        # Require buyer authentication for checkout and conversion
+        elif self.action in ['convert_to_lead', 'clone', 'merge']:
+            return [IsBuyer()]
+        # Other actions require authentication
+        return [IsAuthenticated()]
 
     @action(detail=True, methods=["post"])
     def add_item(self, request, pk=None):
@@ -279,6 +307,17 @@ class LeadViewSet(viewsets.ModelViewSet):
     serializer_class = LeadSerializer
     filterset_fields = ["seller", "status", "customer"]
 
+    def get_permissions(self):
+        """
+        Sellers and distributors can create/manage leads
+        All authenticated users can list/retrieve leads they have access to
+        """
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsSellerOrDistributor()]
+        elif self.action in ['list', 'retrieve']:
+            return [CanAccessLead()]
+        return [IsAuthenticated()]
+
     @action(detail=True, methods=["post"])
     def create_lead(self, request, pk=None):
         """Create new lead"""
@@ -370,6 +409,18 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
     queryset = QuoteRequest.objects.all()
     serializer_class = QuoteRequestSerializer
     filterset_fields = ["buyer", "seller", "status", "is_active"]
+
+    def get_permissions(self):
+        """
+        Buyers and sellers can create/manage quotes they're involved in
+        """
+        if self.action in ['create']:
+            return [IsBuyerOrSeller()]
+        elif self.action in ['list', 'retrieve']:
+            return [CanAccessQuote()]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            return [CanAccessQuote()]
+        return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         quote = serializer.save()
@@ -509,6 +560,18 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     serializer_class = PurchaseOrderSerializer
     filterset_fields = ["buyer", "seller", "status", "is_active"]
 
+    def get_permissions(self):
+        """
+        Buyers and sellers can create/manage orders they're involved in
+        """
+        if self.action in ['create']:
+            return [IsBuyerOrSeller()]
+        elif self.action in ['list', 'retrieve']:
+            return [CanAccessOrder()]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            return [CanAccessOrder()]
+        return [IsAuthenticated()]
+
     def perform_create(self, serializer):
         order = serializer.save()
         order.number = generate_order_number()
@@ -576,6 +639,15 @@ class PriceTierViewSet(viewsets.ModelViewSet):
     queryset = PriceTier.objects.all()
     serializer_class = PriceTierSerializer
     filterset_fields = ["seller", "buyer", "product_sku", "is_active"]
+
+    def get_permissions(self):
+        """
+        Sellers can create/manage price tiers
+        Buyers and sellers can view tiers
+        """
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsSeller()]
+        return [IsBuyerOrSeller()]
 
 
 class PurchaseOrderDetailViewSet(viewsets.ModelViewSet):

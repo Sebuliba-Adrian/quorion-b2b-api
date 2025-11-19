@@ -5,7 +5,10 @@ Views for product management
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from tenants.permissions import IsSeller, IsSellerOfProduct
 
 from .filters import ProductFilter, ProductSKUFilter
 from .models import ListPrice, PackagingType, PackagingUnit, Product, ProductSKU
@@ -27,6 +30,17 @@ class ProductViewSet(viewsets.ModelViewSet):
     ordering_fields = ["name", "created_at", "view_count"]
     ordering = ["-created_at"]
 
+    def get_permissions(self):
+        """
+        Sellers can create/update/delete products
+        Authenticated users can list/retrieve
+        """
+        if self.action in ['create']:
+            return [IsSeller()]
+        elif self.action in ['update', 'partial_update', 'destroy', 'create_sku']:
+            return [IsSellerOfProduct()]
+        return [IsAuthenticated()]
+
     @action(detail=True, methods=["post"])
     def create_sku(self, request, pk=None):
         """Create SKU for product"""
@@ -46,6 +60,15 @@ class ProductSKUViewSet(viewsets.ModelViewSet):
     search_fields = ["number", "name", "product__name"]
     ordering_fields = ["number", "created_at"]
     ordering = ["-created_at"]
+
+    def get_permissions(self):
+        """
+        Sellers can create/update/delete SKUs
+        Authenticated users can list/retrieve
+        """
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'create_distributor_copy']:
+            return [IsSellerOfProduct()]
+        return [IsAuthenticated()]
 
     @action(detail=True, methods=["post"])
     def create_distributor_copy(self, request, pk=None):
