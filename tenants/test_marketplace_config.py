@@ -277,20 +277,20 @@ class TestMarketplaceConfigHelperFunctions:
 class TestMarketplaceConfigViews:
     """Test marketplace configuration API views"""
 
-    def test_list_marketplace_configs(self, api_client, marketplace_config):
+    def test_list_marketplace_configs(self, authenticated_seller_client, marketplace_config):
         """Test listing marketplace configurations"""
-        response = api_client.get("/api/tenants/marketplace-config/")
+        response = authenticated_seller_client.get("/api/tenants/marketplace-config/")
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) >= 1
 
-    def test_retrieve_marketplace_config(self, api_client, marketplace_config):
+    def test_retrieve_marketplace_config(self, authenticated_seller_client, marketplace_config):
         """Test retrieving a marketplace configuration"""
-        response = api_client.get(f"/api/tenants/marketplace-config/{marketplace_config.id}/")
+        response = authenticated_seller_client.get(f"/api/tenants/marketplace-config/{marketplace_config.id}/")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == marketplace_config.name
         assert response.data["mode"] == MarketplaceMode.B2B_NEGOTIATION
 
-    def test_create_marketplace_config(self, api_client):
+    def test_create_marketplace_config(self, authenticated_seller_client):
         """Test creating a marketplace configuration"""
         data = {
             "name": "New Marketplace",
@@ -299,66 +299,66 @@ class TestMarketplaceConfigViews:
             "enable_shopping_cart": True,
             "enable_direct_purchase": True,
         }
-        response = api_client.post("/api/tenants/marketplace-config/", data)
+        response = authenticated_seller_client.post("/api/tenants/marketplace-config/", data)
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["name"] == "New Marketplace"
         assert response.data["mode"] == MarketplaceMode.DIRECT_MARKETPLACE
 
-    def test_update_marketplace_config(self, api_client, marketplace_config):
+    def test_update_marketplace_config(self, authenticated_seller_client, marketplace_config):
         """Test updating a marketplace configuration"""
         data = {
             "name": "Updated Marketplace",
             "mode": MarketplaceMode.HYBRID,
             "is_active": True,
         }
-        response = api_client.patch(f"/api/tenants/marketplace-config/{marketplace_config.id}/", data)
+        response = authenticated_seller_client.patch(f"/api/tenants/marketplace-config/{marketplace_config.id}/", data)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == "Updated Marketplace"
         assert response.data["mode"] == MarketplaceMode.HYBRID
 
-    def test_delete_marketplace_config(self, api_client):
+    def test_delete_marketplace_config(self, authenticated_seller_client):
         """Test deleting a marketplace configuration"""
         config = MarketplaceConfig.objects.create(name="Delete Me", is_active=False)
         config_id = config.id
-        response = api_client.delete(f"/api/tenants/marketplace-config/{config_id}/")
+        response = authenticated_seller_client.delete(f"/api/tenants/marketplace-config/{config_id}/")
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not MarketplaceConfig.objects.filter(id=config_id).exists()
 
-    def test_get_active_marketplace_config(self, api_client, marketplace_config):
+    def test_get_active_marketplace_config(self, authenticated_seller_client, marketplace_config):
         """Test getting active marketplace configuration"""
-        response = api_client.get("/api/tenants/marketplace-config/active/")
+        response = authenticated_seller_client.get("/api/tenants/marketplace-config/active/")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["id"] == str(marketplace_config.id)
 
-    def test_get_active_marketplace_config_none_exists(self, api_client):
+    def test_get_active_marketplace_config_none_exists(self, authenticated_seller_client):
         """Test getting active config when none exists"""
         MarketplaceConfig.objects.all().delete()
         cache.delete("active_marketplace_config")
-        response = api_client.get("/api/tenants/marketplace-config/active/")
+        response = authenticated_seller_client.get("/api/tenants/marketplace-config/active/")
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "No active marketplace configuration found" in response.data["error"]
 
-    def test_activate_marketplace_config(self, api_client):
+    def test_activate_marketplace_config(self, authenticated_seller_client):
         """Test activating a marketplace configuration"""
         config = MarketplaceConfig.objects.create(name="Inactive Config", is_active=False)
-        response = api_client.post(f"/api/tenants/marketplace-config/{config.id}/activate/")
+        response = authenticated_seller_client.post(f"/api/tenants/marketplace-config/{config.id}/activate/")
         assert response.status_code == status.HTTP_200_OK
         config.refresh_from_db()
         assert config.is_active is True
 
-    def test_list_seller_marketplaces(self, api_client, seller_marketplace):
+    def test_list_seller_marketplaces(self, authenticated_seller_client, seller_marketplace):
         """Test listing seller marketplaces"""
-        response = api_client.get("/api/tenants/seller-marketplace/")
+        response = authenticated_seller_client.get("/api/tenants/seller-marketplace/")
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) >= 1
 
-    def test_retrieve_seller_marketplace(self, api_client, seller_marketplace):
+    def test_retrieve_seller_marketplace(self, authenticated_seller_client, seller_marketplace):
         """Test retrieving a seller marketplace"""
-        response = api_client.get(f"/api/tenants/seller-marketplace/{seller_marketplace.id}/")
+        response = authenticated_seller_client.get(f"/api/tenants/seller-marketplace/{seller_marketplace.id}/")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["storefront_name"] == seller_marketplace.storefront_name
 
-    def test_create_seller_marketplace(self, api_client, seller_tenant):
+    def test_create_seller_marketplace(self, authenticated_seller_client, seller_tenant):
         """Test creating a seller marketplace"""
         data = {
             "seller": str(seller_tenant.id),
@@ -367,18 +367,18 @@ class TestMarketplaceConfigViews:
             "description": "New storefront description",
             "is_active": True,
         }
-        response = api_client.post("/api/tenants/seller-marketplace/", data)
+        response = authenticated_seller_client.post("/api/tenants/seller-marketplace/", data)
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["storefront_name"] == "New Storefront"
 
-    def test_update_seller_marketplace(self, api_client, seller_marketplace):
+    def test_update_seller_marketplace(self, authenticated_seller_client, seller_marketplace):
         """Test updating a seller marketplace"""
         data = {"storefront_name": "Updated Storefront", "allow_direct_purchase": True}
-        response = api_client.patch(f"/api/tenants/seller-marketplace/{seller_marketplace.id}/", data)
+        response = authenticated_seller_client.patch(f"/api/tenants/seller-marketplace/{seller_marketplace.id}/", data)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["storefront_name"] == "Updated Storefront"
 
-    def test_delete_seller_marketplace(self, api_client, seller_tenant):
+    def test_delete_seller_marketplace(self, authenticated_seller_client, seller_tenant):
         """Test deleting a seller marketplace"""
         marketplace = SellerMarketplace.objects.create(
             seller=seller_tenant,
@@ -386,17 +386,17 @@ class TestMarketplaceConfigViews:
             storefront_slug="delete-me",
         )
         marketplace_id = marketplace.id
-        response = api_client.delete(f"/api/tenants/seller-marketplace/{marketplace_id}/")
+        response = authenticated_seller_client.delete(f"/api/tenants/seller-marketplace/{marketplace_id}/")
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not SellerMarketplace.objects.filter(id=marketplace_id).exists()
 
-    def test_get_effective_settings(self, api_client, seller_marketplace, marketplace_config):
+    def test_get_effective_settings(self, authenticated_seller_client, seller_marketplace, marketplace_config):
         """Test getting effective settings for seller marketplace"""
         seller_marketplace.allow_direct_purchase = True
         seller_marketplace.min_order_value = Decimal("100.00")
         seller_marketplace.save()
 
-        response = api_client.get(f"/api/tenants/seller-marketplace/{seller_marketplace.id}/effective_settings/")
+        response = authenticated_seller_client.get(f"/api/tenants/seller-marketplace/{seller_marketplace.id}/effective_settings/")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["allow_direct_purchase"] is True
         assert Decimal(response.data["min_order_value"]) == Decimal("100.00")

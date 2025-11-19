@@ -31,18 +31,21 @@ def api_client():
 
 
 @pytest.fixture
-def seller():
-    return Tenant.objects.create(name="Test Seller", type="seller", email="seller@test.com")
+def seller(seller_tenant):
+    """Use global seller_tenant fixture"""
+    return seller_tenant
 
 
 @pytest.fixture
-def buyer():
-    return Tenant.objects.create(name="Test Buyer", type="buyer", email="buyer@test.com")
+def buyer(buyer_tenant):
+    """Use global buyer_tenant fixture"""
+    return buyer_tenant
 
 
 @pytest.fixture
-def distributor():
-    return Tenant.objects.create(name="Test Distributor", type="distributor", email="distributor@test.com")
+def distributor(distributor_tenant):
+    """Use global distributor_tenant fixture"""
+    return distributor_tenant
 
 
 @pytest.fixture
@@ -118,7 +121,7 @@ def payment_mode():
 class TestLeadFlow:
     """Test lead creation and distributor forwarding"""
 
-    def test_create_lead(self, api_client, seller):
+    def test_create_lead(self, authenticated_seller_client, seller):
         url = "/api/commerce/leads/"
         data = {
             "seller": str(seller.id),
@@ -127,17 +130,17 @@ class TestLeadFlow:
             "buyer_email": "john@buyer.com",
             "buyer_company_name": "Buyer Corp",
         }
-        response = api_client.post(url, data, format="json")
+        response = authenticated_seller_client.post(url, data, format="json")
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["status"] == "no_lead"
 
         # Create the lead
         lead_id = response.data["id"]
-        response = api_client.post(f"/api/commerce/leads/{lead_id}/create_lead/")
+        response = authenticated_seller_client.post(f"/api/commerce/leads/{lead_id}/create_lead/")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "new"
 
-    def test_forward_lead_to_distributor(self, api_client, seller, distributor):
+    def test_forward_lead_to_distributor(self, authenticated_seller_client, seller, distributor):
         # Create lead
         lead = Lead.objects.create(
             seller=seller,
@@ -151,7 +154,7 @@ class TestLeadFlow:
 
         # Forward to distributor
         url = f"/api/commerce/leads/{lead.id}/forward_to_distributor/"
-        response = api_client.post(url, {"distributor_id": str(distributor.id)}, format="json")
+        response = authenticated_seller_client.post(url, {"distributor_id": str(distributor.id)}, format="json")
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["parent_lead"]["status"] == "forwarded"
         assert "child_lead" in response.data
@@ -160,7 +163,7 @@ class TestLeadFlow:
         assert child_lead.seller == distributor
         assert child_lead.parent_lead == lead
 
-    def test_distributor_accepts_lead(self, api_client, seller, distributor):
+    def test_distributor_accepts_lead(self, authenticated_seller_client, seller, distributor):
         # Create lead and forward
         lead = Lead.objects.create(
             seller=seller, buyer_first_name="John", buyer_last_name="Doe", buyer_email="john@buyer.com"
@@ -181,7 +184,7 @@ class TestLeadFlow:
 
         # Distributor accepts
         url = f"/api/commerce/leads/{child_lead.id}/accept_by_distributor/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "accepted_by_distributor"
 
@@ -191,7 +194,7 @@ class TestQuoteFlow:
     """Test quote request and negotiation flow"""
 
     def test_create_quote(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
     ):
         url = "/api/commerce/quotes/"
         data = {
@@ -203,13 +206,13 @@ class TestQuoteFlow:
             "payment_mode": str(payment_mode.id),
             "currency": "USD",
         }
-        response = api_client.post(url, data, format="json")
+        response = authenticated_seller_client.post(url, data, format="json")
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["status"] == "new"
         assert "number" in response.data
 
     def test_add_items_to_quote(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
     ):
         # Create quote
         quote = QuoteRequest.objects.create(
@@ -234,11 +237,11 @@ class TestQuoteFlow:
             "total_quantity": Decimal("1000.00"),
             "currency": "USD",
         }
-        response = api_client.post(url, data, format="json")
+        response = authenticated_seller_client.post(url, data, format="json")
         assert response.status_code == status.HTTP_201_CREATED
 
     def test_buyer_requests_quote(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
     ):
         # Create quote with items
         quote = QuoteRequest.objects.create(
@@ -264,12 +267,12 @@ class TestQuoteFlow:
 
         # Buyer requests
         url = f"/api/commerce/quotes/{quote.id}/buyer_requests/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "requested"
 
     def test_seller_responds_with_pricing(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
     ):
         # Create quote and request
         quote = QuoteRequest.objects.create(
@@ -297,7 +300,7 @@ class TestQuoteFlow:
         # Seller responds
         url = f"/api/commerce/quotes/{quote.id}/seller_responds/"
         data = {"items": [{"id": str(item.id), "price_per_unit": "50.00"}], "shipping_cost": "100.00"}
-        response = api_client.post(url, data, format="json")
+        response = authenticated_seller_client.post(url, data, format="json")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "responded"
 
@@ -309,7 +312,7 @@ class TestQuoteFlow:
         assert quote.shipping_cost == Decimal("100.00")
 
     def test_price_tier_resolution(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
     ):
         # Create price tier
         price_tier = PriceTier.objects.create(
@@ -352,7 +355,7 @@ class TestQuoteFlow:
         assert price == Decimal("45.00")
 
     def test_buyer_accepts_quote_creates_order(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
     ):
         # Create quote, request, and respond
         quote = QuoteRequest.objects.create(
@@ -383,7 +386,7 @@ class TestQuoteFlow:
 
         # Buyer accepts
         url = f"/api/commerce/quotes/{quote.id}/buyer_accepts/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_201_CREATED
         assert "order" in response.data
 
@@ -396,7 +399,7 @@ class TestQuoteFlow:
 
         # Check quote status (can't refresh FSM field directly, check via API)
         url = f"/api/commerce/quotes/{quote.id}/"
-        response = api_client.get(url)
+        response = authenticated_seller_client.get(url)
         assert response.data["status"] == "accepted"
 
 
@@ -405,7 +408,7 @@ class TestOrderFlow:
     """Test purchase order fulfillment flow"""
 
     def test_accept_order(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
     ):
         # Create order
         order = PurchaseOrder.objects.create(
@@ -432,12 +435,12 @@ class TestOrderFlow:
 
         # Accept order
         url = f"/api/commerce/orders/{order.id}/accept/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "accepted"
 
     def test_order_fulfillment_flow(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
     ):
         # Create and accept order
         order = PurchaseOrder.objects.create(
@@ -465,36 +468,36 @@ class TestOrderFlow:
 
         # Make in progress
         url = f"/api/commerce/orders/{order.id}/make_in_progress/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "in_progress"
 
         # Invoice
         url = f"/api/commerce/orders/{order.id}/invoice/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "invoiced"
 
         # Ship
         url = f"/api/commerce/orders/{order.id}/ship_order/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "shipped"
 
         # Receive payment
         url = f"/api/commerce/orders/{order.id}/receive_payment/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "payment_received"
 
         # Complete
         url = f"/api/commerce/orders/{order.id}/complete/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "completed"
 
     def test_create_shipment_advice(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
     ):
         # Create and ship order
         order = PurchaseOrder.objects.create(
@@ -520,7 +523,7 @@ class TestOrderFlow:
             "estimated_time_of_dispatch": timezone.now().isoformat(),
             "estimated_time_of_arrival": (timezone.now() + timezone.timedelta(days=3)).isoformat(),
         }
-        response = api_client.post(url, data, format="json")
+        response = authenticated_seller_client.post(url, data, format="json")
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["carrier"] == "FedEx"
         assert response.data["carrier_number"] == "TRACK123456"
@@ -531,7 +534,7 @@ class TestEndToEndFlow:
     """Test complete end-to-end flow: Lead → Quote → Order → Shipping"""
 
     def test_complete_flow(
-        self, api_client, seller, buyer, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
+        self, authenticated_seller_client, seller, buyer, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
     ):
         # 1. Create lead
         lead = Lead.objects.create(
@@ -591,7 +594,7 @@ class TestEndToEndFlow:
 
         # 7. Buyer accepts - creates order (via API)
         url = f"/api/commerce/quotes/{quote.id}/buyer_accepts/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_201_CREATED
         assert "order" in response.data
 
@@ -650,37 +653,37 @@ class TestEndToEndFlow:
 class TestErrorCases:
     """Test error handling and edge cases"""
 
-    def test_forward_lead_missing_distributor_id(self, api_client, seller):
+    def test_forward_lead_missing_distributor_id(self, authenticated_seller_client, seller):
         lead = Lead.objects.create(seller=seller, buyer_first_name="John", buyer_email="john@buyer.com")
         lead.create()
         lead.save()
 
         url = f"/api/commerce/leads/{lead.id}/forward_to_distributor/"
-        response = api_client.post(url, {}, format="json")
+        response = authenticated_seller_client.post(url, {}, format="json")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "distributor_id" in response.data["error"]
 
-    def test_forward_lead_invalid_distributor(self, api_client, seller):
+    def test_forward_lead_invalid_distributor(self, authenticated_seller_client, seller):
         lead = Lead.objects.create(seller=seller, buyer_first_name="John", buyer_email="john@buyer.com")
         lead.create()
         lead.save()
 
         url = f"/api/commerce/leads/{lead.id}/forward_to_distributor/"
-        response = api_client.post(url, {"distributor_id": "00000000-0000-0000-0000-000000000000"}, format="json")
+        response = authenticated_seller_client.post(url, {"distributor_id": "00000000-0000-0000-0000-000000000000"}, format="json")
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "Distributor not found" in response.data["error"]
 
-    def test_convert_lead(self, api_client, seller):
+    def test_convert_lead(self, authenticated_seller_client, seller):
         lead = Lead.objects.create(seller=seller, buyer_first_name="John", buyer_email="john@buyer.com")
         lead.create()
         lead.save()
 
         url = f"/api/commerce/leads/{lead.id}/convert/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "converted"
 
-    def test_quote_cancel(self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode):
+    def test_quote_cancel(self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode):
         quote = QuoteRequest.objects.create(
             buyer=buyer,
             seller=seller,
@@ -694,12 +697,12 @@ class TestErrorCases:
         quote.save()
 
         url = f"/api/commerce/quotes/{quote.id}/cancel/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "cancelled"
 
     def test_quote_seller_declines(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode
     ):
         quote = QuoteRequest.objects.create(
             buyer=buyer,
@@ -715,12 +718,12 @@ class TestErrorCases:
         quote.save()
 
         url = f"/api/commerce/quotes/{quote.id}/seller_declines/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "declined"
 
     def test_quote_seller_modifies(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode
     ):
         quote = QuoteRequest.objects.create(
             buyer=buyer,
@@ -737,13 +740,13 @@ class TestErrorCases:
         quote.save()
 
         url = f"/api/commerce/quotes/{quote.id}/seller_modifies/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         # seller_modifies transitions from RESPONDED to REQUESTED
         assert response.data["status"] == "requested"
 
     def test_quote_buyer_responds(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode
     ):
         quote = QuoteRequest.objects.create(
             buyer=buyer,
@@ -760,13 +763,13 @@ class TestErrorCases:
         quote.save()
 
         url = f"/api/commerce/quotes/{quote.id}/buyer_responds/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         # buyer_responds transitions from RESPONDED to REQUESTED
         assert response.data["status"] == "requested"
 
     def test_quote_item_auto_price_resolution(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode, product, sku
     ):
         # Create price tier
         price_tier = PriceTier.objects.create(
@@ -805,14 +808,14 @@ class TestErrorCases:
             "currency": "USD",
             # No price_per_unit - should be auto-resolved
         }
-        response = api_client.post(url, data, format="json")
+        response = authenticated_seller_client.post(url, data, format="json")
         assert response.status_code == status.HTTP_201_CREATED
         # Price should be resolved from tier
         item = QuoteRequestDetail.objects.get(id=response.data["id"])
         assert item.price_per_unit == Decimal("45.00")
 
     def test_order_perform_create(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode
     ):
         # Create order via API - should auto-generate number and call create_order
         url = "/api/commerce/orders/"
@@ -825,7 +828,7 @@ class TestErrorCases:
             "payment_mode": str(payment_mode.id),
             "currency": "USD",
         }
-        response = api_client.post(url, data, format="json")
+        response = authenticated_seller_client.post(url, data, format="json")
         assert response.status_code == status.HTTP_201_CREATED
         assert "number" in response.data
         assert response.data["status"] == "new"
@@ -845,7 +848,7 @@ class TestErrorCases:
         lead2 = Lead.objects.create(seller=seller, buyer_email="jane@buyer.com")
         assert "jane@buyer.com" in str(lead2)
 
-    def test_order_cancel(self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode):
+    def test_order_cancel(self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode):
         order = PurchaseOrder.objects.create(
             buyer=buyer,
             seller=seller,
@@ -859,11 +862,11 @@ class TestErrorCases:
         order.save()
 
         url = f"/api/commerce/orders/{order.id}/cancel/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "cancelled"
 
-    def test_distributor_rejects_lead(self, api_client, seller, distributor):
+    def test_distributor_rejects_lead(self, authenticated_seller_client, seller, distributor):
         lead = Lead.objects.create(seller=seller, buyer_first_name="John", buyer_email="john@buyer.com")
         lead.create()
         lead.save()
@@ -876,7 +879,7 @@ class TestErrorCases:
         child_lead.save()
 
         url = f"/api/commerce/leads/{child_lead.id}/reject_by_distributor/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "rejected_by_distributor"
 
@@ -1036,7 +1039,7 @@ class TestErrorCases:
         pass  # This test case is covered by other tests - quote_request is required field
 
     def test_seller_responds_invalid_item_id(
-        self, api_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode
+        self, authenticated_seller_client, buyer, seller, buyer_warehouse, delivery_term, payment_term, payment_mode
     ):
         quote = QuoteRequest.objects.create(
             buyer=buyer,
@@ -1057,12 +1060,12 @@ class TestErrorCases:
             "items": [{"id": "00000000-0000-0000-0000-000000000000", "price_per_unit": "50.00"}],
             "shipping_cost": "100.00",
         }
-        response = api_client.post(url, data, format="json")
+        response = authenticated_seller_client.post(url, data, format="json")
         # Should still succeed, just ignore invalid item
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "responded"
 
-    def test_accept_by_distributor_with_parent_forwarded(self, api_client, seller, distributor):
+    def test_accept_by_distributor_with_parent_forwarded(self, authenticated_seller_client, seller, distributor):
         # Create parent lead and forward it
         parent_lead = Lead.objects.create(seller=seller, buyer_first_name="John", buyer_email="john@buyer.com")
         parent_lead.create()
@@ -1079,6 +1082,6 @@ class TestErrorCases:
 
         # Accept child lead - should check parent status
         url = f"/api/commerce/leads/{child_lead.id}/accept_by_distributor/"
-        response = api_client.post(url)
+        response = authenticated_seller_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "accepted_by_distributor"

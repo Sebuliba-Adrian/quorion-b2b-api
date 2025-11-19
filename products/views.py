@@ -2,10 +2,15 @@
 Views for product management
 """
 
-from rest_framework import status, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from tenants.permissions import IsSeller, IsSellerOfProduct
+
+from .filters import ProductFilter, ProductSKUFilter
 from .models import ListPrice, PackagingType, PackagingUnit, Product, ProductSKU
 from .serializers import (
     ListPriceSerializer,
@@ -19,7 +24,22 @@ from .serializers import (
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    filterset_fields = ["seller", "status", "is_active"]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = ProductFilter
+    search_fields = ["name", "description", "short_description", "brand_product_name", "slug"]
+    ordering_fields = ["name", "created_at", "view_count"]
+    ordering = ["-created_at"]
+
+    def get_permissions(self):
+        """
+        Sellers can create/update/delete products
+        Authenticated users can list/retrieve
+        """
+        if self.action in ['create']:
+            return [IsSeller()]
+        elif self.action in ['update', 'partial_update', 'destroy', 'create_sku']:
+            return [IsSellerOfProduct()]
+        return [IsAuthenticated()]
 
     @action(detail=True, methods=["post"])
     def create_sku(self, request, pk=None):
@@ -35,7 +55,20 @@ class ProductViewSet(viewsets.ModelViewSet):
 class ProductSKUViewSet(viewsets.ModelViewSet):
     queryset = ProductSKU.objects.all()
     serializer_class = ProductSKUSerializer
-    filterset_fields = ["product", "distributor", "buyer", "kind", "is_active"]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = ProductSKUFilter
+    search_fields = ["number", "name", "product__name"]
+    ordering_fields = ["number", "created_at"]
+    ordering = ["-created_at"]
+
+    def get_permissions(self):
+        """
+        Sellers can create/update/delete SKUs
+        Authenticated users can list/retrieve
+        """
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'create_distributor_copy']:
+            return [IsSellerOfProduct()]
+        return [IsAuthenticated()]
 
     @action(detail=True, methods=["post"])
     def create_distributor_copy(self, request, pk=None):

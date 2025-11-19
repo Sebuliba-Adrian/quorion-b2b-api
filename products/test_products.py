@@ -161,19 +161,19 @@ class TestProductModels:
 class TestProductViews:
     """Test product views for 100% coverage"""
 
-    def test_list_products(self, api_client, product):
+    def test_list_products(self, authenticated_seller_client, product):
         """Test listing products"""
-        response = api_client.get("/api/products/products/")
+        response = authenticated_seller_client.get("/api/products/products/")
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) >= 1
 
-    def test_retrieve_product(self, api_client, product):
+    def test_retrieve_product(self, authenticated_seller_client, product):
         """Test retrieving a product"""
-        response = api_client.get(f"/api/products/products/{product.id}/")
+        response = authenticated_seller_client.get(f"/api/products/products/{product.id}/")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == product.name
 
-    def test_create_product(self, api_client, seller_tenant):
+    def test_create_product(self, authenticated_seller_client, seller_tenant):
         """Test creating a product"""
         data = {
             "seller": str(seller_tenant.id),
@@ -181,51 +181,51 @@ class TestProductViews:
             "description": "New product description",
             "brand_product_name": "Brand New",
         }
-        response = api_client.post("/api/products/products/", data)
+        response = authenticated_seller_client.post("/api/products/products/", data)
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["name"] == "New Product"
 
-    def test_update_product(self, api_client, product):
+    def test_update_product(self, authenticated_seller_client, product):
         """Test updating a product"""
         data = {
             "seller": str(product.seller.id),
             "name": "Updated Product",
             "brand_product_name": product.brand_product_name,
         }
-        response = api_client.put(f"/api/products/products/{product.id}/", data)
+        response = authenticated_seller_client.put(f"/api/products/products/{product.id}/", data)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == "Updated Product"
 
-    def test_partial_update_product(self, api_client, product):
+    def test_partial_update_product(self, authenticated_seller_client, product):
         """Test partial update of product"""
         data = {"description": "Updated description"}
-        response = api_client.patch(f"/api/products/products/{product.id}/", data)
+        response = authenticated_seller_client.patch(f"/api/products/products/{product.id}/", data)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["description"] == "Updated description"
 
-    def test_delete_product(self, api_client, product):
+    def test_delete_product(self, authenticated_seller_client, product):
         """Test deleting a product"""
         product_id = product.id
-        response = api_client.delete(f"/api/products/products/{product_id}/")
+        response = authenticated_seller_client.delete(f"/api/products/products/{product_id}/")
         assert response.status_code == status.HTTP_204_NO_CONTENT
         # Verify it's deleted
         from products.models import Product
 
         assert not Product.objects.filter(id=product_id).exists()
 
-    def test_list_product_skus(self, api_client, product_sku):
+    def test_list_product_skus(self, authenticated_seller_client, product_sku):
         """Test listing product SKUs"""
-        response = api_client.get("/api/products/skus/")
+        response = authenticated_seller_client.get("/api/products/skus/")
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) >= 1
 
-    def test_retrieve_product_sku(self, api_client, product_sku):
+    def test_retrieve_product_sku(self, authenticated_seller_client, product_sku):
         """Test retrieving a product SKU"""
-        response = api_client.get(f"/api/products/skus/{product_sku.id}/")
+        response = authenticated_seller_client.get(f"/api/products/skus/{product_sku.id}/")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["number"] == product_sku.number
 
-    def test_create_product_sku(self, api_client, product, packaging_type, packaging_unit):
+    def test_create_product_sku(self, authenticated_seller_client, product, packaging_type, packaging_unit):
         """Test creating a product SKU"""
         data = {
             "product": str(product.id),
@@ -235,11 +235,11 @@ class TestProductViews:
             "packaging_unit": str(packaging_unit.id),
             "package_volume": "50.00",
         }
-        response = api_client.post("/api/products/skus/", data)
+        response = authenticated_seller_client.post("/api/products/skus/", data)
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["number"] == "SKU-NEW-001"
 
-    def test_update_product_sku(self, api_client, product_sku):
+    def test_update_product_sku(self, authenticated_seller_client, product_sku):
         """Test updating a product SKU"""
         data = {
             "product": str(product_sku.product.id),
@@ -248,26 +248,26 @@ class TestProductViews:
             "packaging_unit": str(product_sku.packaging_unit.id),
             "package_volume": "75.00",
         }
-        response = api_client.put(f"/api/products/skus/{product_sku.id}/", data)
+        response = authenticated_seller_client.put(f"/api/products/skus/{product_sku.id}/", data)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["number"] == "SKU-UPDATED"
 
-    def test_partial_update_product_sku(self, api_client, product_sku):
+    def test_partial_update_product_sku(self, authenticated_seller_client, product_sku):
         """Test partial update of product SKU"""
         data = {"name": "Updated SKU Name"}
-        response = api_client.patch(f"/api/products/skus/{product_sku.id}/", data)
+        response = authenticated_seller_client.patch(f"/api/products/skus/{product_sku.id}/", data)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == "Updated SKU Name"
 
-    def test_delete_product_sku(self, api_client, product_sku):
+    def test_delete_product_sku(self, authenticated_seller_client, product_sku):
         """Test deleting a product SKU"""
         sku_id = product_sku.id
-        response = api_client.delete(f"/api/products/skus/{sku_id}/")
+        response = authenticated_seller_client.delete(f"/api/products/skus/{sku_id}/")
         assert response.status_code == status.HTTP_204_NO_CONTENT
         # Verify it's deleted
         assert not ProductSKU.objects.filter(id=sku_id).exists()
 
-    def test_create_sku_action(self, api_client, product, packaging_type, packaging_unit):
+    def test_create_sku_action(self, authenticated_seller_client, product, packaging_type, packaging_unit):
         """Test custom create_sku action on ProductViewSet"""
         data = {
             "product": str(product.id),
@@ -277,18 +277,18 @@ class TestProductViews:
             "packaging_unit": str(packaging_unit.id),
             "package_volume": "75.00",
         }
-        response = api_client.post(f"/api/products/products/{product.id}/create_sku/", data)
+        response = authenticated_seller_client.post(f"/api/products/products/{product.id}/create_sku/", data)
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["number"] == "SKU-ACTION-001"
 
-    def test_create_sku_action_invalid_data(self, api_client, product):
+    def test_create_sku_action_invalid_data(self, authenticated_seller_client, product):
         """Test create_sku action with invalid data"""
         data = {"number": ""}  # Invalid - missing required fields
-        response = api_client.post(f"/api/products/products/{product.id}/create_sku/", data)
+        response = authenticated_seller_client.post(f"/api/products/products/{product.id}/create_sku/", data)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_create_distributor_copy_action(
-        self, api_client, product, packaging_type, packaging_unit, distributor_tenant
+        self, authenticated_seller_client, product, packaging_type, packaging_unit, distributor_tenant
     ):
         """Test custom create_distributor_copy action"""
         # Create a unique SKU to test with
@@ -320,25 +320,25 @@ class TestProductViews:
             mock_method.return_value = mock_dist_sku
 
             data = {"distributor_id": str(distributor_tenant.id)}
-            response = api_client.post(f"/api/products/skus/{test_sku.id}/create_distributor_copy/", data)
+            response = authenticated_seller_client.post(f"/api/products/skus/{test_sku.id}/create_distributor_copy/", data)
 
             assert response.status_code == status.HTTP_201_CREATED
             assert response.data["number"] == "DIST-SKU-COPY"
             mock_method.assert_called_once_with(distributor_tenant)
 
-    def test_create_distributor_copy_action_missing_id(self, api_client, product_sku):
+    def test_create_distributor_copy_action_missing_id(self, authenticated_seller_client, product_sku):
         """Test create_distributor_copy action without distributor_id"""
         data = {}  # Missing distributor_id
-        response = api_client.post(f"/api/products/skus/{product_sku.id}/create_distributor_copy/", data)
+        response = authenticated_seller_client.post(f"/api/products/skus/{product_sku.id}/create_distributor_copy/", data)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "distributor_id required" in response.data["error"]
 
-    def test_create_distributor_copy_action_invalid_distributor(self, api_client, product_sku):
+    def test_create_distributor_copy_action_invalid_distributor(self, authenticated_seller_client, product_sku):
         """Test create_distributor_copy action with non-existent distributor"""
         import uuid
 
         fake_id = str(uuid.uuid4())
         data = {"distributor_id": fake_id}
-        response = api_client.post(f"/api/products/skus/{product_sku.id}/create_distributor_copy/", data)
+        response = authenticated_seller_client.post(f"/api/products/skus/{product_sku.id}/create_distributor_copy/", data)
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "Distributor not found" in response.data["error"]
