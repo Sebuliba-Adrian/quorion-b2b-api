@@ -716,3 +716,17 @@ class ShipmentAdvice(models.Model):
 
     def __str__(self):
         return f"Shipment for {self.order.number}"
+
+
+# Import marketplace models to register them with Django
+from commerce.marketplace_models import (  # noqa: E402, F401
+    DirectCheckout,
+    Notification,
+    NotificationType,
+    Payment,
+    PaymentMethod,
+    PaymentStatus,
+    ProductView,
+    PromoCode,
+    SearchQuery,
+)

@@ -26,20 +26,75 @@ class Product(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     seller = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="products")
+    category = models.ForeignKey(
+        "products.ProductCategory", on_delete=models.SET_NULL, null=True, blank=True, related_name="products"
+    )
     name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
     description = models.TextField(blank=True, null=True)
     brand_product_name = models.CharField(max_length=255)
+    short_description = models.CharField(max_length=500, blank=True, null=True, help_text="Brief product summary")
+    specifications = models.JSONField(default=dict, blank=True, help_text="Product specifications in JSON format")
+    tags = models.ManyToManyField("products.ProductTag", blank=True, related_name="products")
     status = models.CharField(max_length=20, choices=ProductStatus.choices, default=ProductStatus.DRAFT)
     is_active = models.BooleanField(default=True)
+    is_featured = models.BooleanField(default=False, help_text="Feature this product on homepage")
+    view_count = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "product"
         ordering = ["name"]
+        indexes = [
+            models.Index(fields=["slug"]),
+            models.Index(fields=["seller", "is_active"]),
+            models.Index(fields=["category", "is_active"]),
+            models.Index(fields=["is_featured", "is_active"]),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.seller.name})"
+
+    def save(self, *args, **kwargs):
+        # Auto-generate slug from name if not provided
+        if not self.slug:
+            from django.utils.text import slugify
+
+            base_slug = slugify(self.name)
+            slug = base_slug
+            counter = 1
+            while Product.objects.filter(slug=slug).exclude(id=self.id).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def get_average_rating(self):
+        """Get average product rating"""
+        from products.marketplace_models import ProductReview
+
+        reviews = ProductReview.objects.filter(product=self, is_approved=True)
+        if reviews.exists():
+            return reviews.aggregate(models.Avg("rating"))["rating__avg"]
+        return None
+
+    def get_review_count(self):
+        """Get total number of approved reviews"""
+        from products.marketplace_models import ProductReview
+
+        return ProductReview.objects.filter(product=self, is_approved=True).count()
+
+    def get_primary_image(self):
+        """Get primary product image"""
+        from products.marketplace_models import ProductImage
+
+        return ProductImage.objects.filter(product=self, is_primary=True).first()
+
+    def increment_view_count(self):
+        """Increment product view count"""
+        self.view_count += 1
+        self.save(update_fields=["view_count"])
 
 
 class PackagingType(models.Model):
@@ -150,3 +205,20 @@ class ListPrice(models.Model):
 
     def __str__(self):
         return f"{self.sku.number} - {self.price} {self.currency}"
+
+
+# Import marketplace models to register them with Django
+from products.marketplace_models import (  # noqa: E402, F401
+    Inventory,
+    ProductAttribute,
+    ProductAttributeValue,
+    ProductCategory,
+    ProductImage,
+    ProductReview,
+    ProductTag,
+    ProductVariant,
+    ProductVariantAttribute,
+    SellerRating,
+    Wishlist,
+    WishlistItem,
+)
