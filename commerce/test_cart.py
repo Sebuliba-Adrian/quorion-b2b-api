@@ -20,16 +20,7 @@ def api_client():
     return APIClient()
 
 
-@pytest.fixture
-def buyer_tenant():
-    """Create buyer tenant"""
-    return Tenant.objects.create(name="Test Buyer", type=TenantType.BUYER, email="buyer@test.com")
-
-
-@pytest.fixture
-def seller_tenant():
-    """Create seller tenant"""
-    return Tenant.objects.create(name="Test Seller", type=TenantType.SELLER, email="seller@test.com")
+# buyer_tenant and seller_tenant fixtures are defined in conftest.py
 
 
 @pytest.fixture

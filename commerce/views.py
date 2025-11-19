@@ -90,16 +90,17 @@ class CartViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """
         Anonymous users can create carts and add items (guest shopping)
-        Authentication required for checkout operations (convert_to_lead, etc.)
+        convert_to_lead is for lead generation and can be done by anyone
+        Other operations require appropriate authentication
         """
         from rest_framework.permissions import AllowAny
 
-        # Allow anonymous cart creation and item management
-        if self.action in ['create', 'list', 'retrieve', 'add_item', 'remove_item', 'add_bulk_items']:
+        # Allow anonymous cart creation, item management, and lead conversion
+        if self.action in ['create', 'list', 'retrieve', 'add_item', 'remove_item', 'add_bulk_items', 'clear', 'validate', 'convert_to_lead']:
             return [AllowAny()]
-        # Require buyer authentication for checkout and conversion
-        elif self.action in ['convert_to_lead', 'clone', 'merge']:
-            return [IsBuyer()]
+        # Authenticated users can clone/merge carts
+        elif self.action in ['clone', 'merge']:
+            return [IsAuthenticated()]
         # Other actions require authentication
         return [IsAuthenticated()]
 

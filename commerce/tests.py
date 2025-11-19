@@ -31,18 +31,21 @@ def api_client():
 
 
 @pytest.fixture
-def seller():
-    return Tenant.objects.create(name="Test Seller", type="seller", email="seller@test.com")
+def seller(seller_tenant):
+    """Use global seller_tenant fixture"""
+    return seller_tenant
 
 
 @pytest.fixture
-def buyer():
-    return Tenant.objects.create(name="Test Buyer", type="buyer", email="buyer@test.com")
+def buyer(buyer_tenant):
+    """Use global buyer_tenant fixture"""
+    return buyer_tenant
 
 
 @pytest.fixture
-def distributor():
-    return Tenant.objects.create(name="Test Distributor", type="distributor", email="distributor@test.com")
+def distributor(distributor_tenant):
+    """Use global distributor_tenant fixture"""
+    return distributor_tenant
 
 
 @pytest.fixture
